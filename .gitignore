@@ -1,0 +1,14 @@
+__pycache__/
+/data
+/media
+/workingWavs
+/.ipynb_checkpoints/
+/wer_time_testing
+/results
+.RData
+.Rhistory
+*.xlsx
+*.csv
+
+*.json
+

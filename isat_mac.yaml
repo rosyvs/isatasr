@@ -1,0 +1,28 @@
+name: isat
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ca-certificates
+  - defaults/noarch::tzdata==2020f=h52ac0ba_0
+  - openssl
+  - defaults/noarch::backcall==0.2.0=pyhd3eb1b0_0
+  - certifi
+  - defaults/noarch::colorama==0.4.4=pyhd3eb1b0_0
+  - defaults/noarch::decorator==4.4.2=pyhd3eb1b0_0
+  - defaults/noarch::ipython_genutils==0.2.0=pyhd3eb1b0_1
+  - defaults/noarch::parso==0.7.0=py_0
+  - defaults/noarch::pickleshare==0.7.5=pyhd3eb1b0_1003
+  - defaults/noarch::wcwidth==0.2.5=py_0
+  - defaults/noarch::wheel==0.36.2=pyhd3eb1b0_0
+  - defaults/noarch::python-dateutil==2.8.1=pyhd3eb1b0_0
+  - defaults/noarch::traitlets==5.0.5=pyhd3eb1b0_0
+  - defaults/noarch::pygments==2.8.0=pyhd3eb1b0_0
+  - defaults/noarch::jupyter_client==6.1.7=py_0
+  - defaults/noarch::prompt-toolkit==3.0.8=py_0
+  - librosa
+  - jupyter
+  - jupyterlab
+  - speechrecognition
+  - pydub
+prefix: C:\Users\roso8920\Miniconda3\envs\isat

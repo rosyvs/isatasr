@@ -1,0 +1,9 @@
+to_segment,ref_mic,offset_sec
+Room 1 sony sg11 day 1 pm 210719_1250,Room_1_yeti_sg11_day_1_pm_20210719-125109,
+Room 3 MXL sg1 day 1 am,Room_3_Yeti_sg1_day_1_am,
+Room 3 Sony sg1 day 1 am 210712_0920,Room_3_Yeti_sg1_day_1_am,
+room 3 MXL sg1 SI Day 2 am,room_3_yeti_sg1_day_2_am_20210713-092624,
+Room 3 Sony sg2 day 1 am 210712_0919,room_3_yeti_sg1_day_2_am_20210713-092624,
+Room 3 Sony sg1 day 4 am 210715_0923,room_3_yeti_sg1_day_4_am_20210715-092312,
+room 3 MXL SG1 SI Day 4 am part 2,room_3_yeti_sg1_day_4_am_20210715-092312,
+Room 3 Sony sg2 day 1 am 210712_0919,Room_3_Yeti_sg2_day_1_am,

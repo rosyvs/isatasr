@@ -1,0 +1,46 @@
+name: isat
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ca-certificates
+  - defaults/noarch::tzdata==2020f=h52ac0ba_0
+  - defaults/win-64::vs2015_runtime==14.27.29016=h5e58377_2
+  - defaults/win-64::vc==14.2=h21ff451_1
+  - defaults/win-64::libsodium==1.0.18=h62dcd97_0
+  - openssl
+  - defaults/win-64::zlib==1.2.11=h62dcd97_4
+  - defaults/win-64::sqlite==3.33.0=h2a8f88b_0
+  - defaults/win-64::zeromq==4.3.3=ha925a31_3
+  - defaults/win-64::python==3.9.1=h6244533_2
+  - defaults/noarch::backcall==0.2.0=pyhd3eb1b0_0
+  - certifi
+  - defaults/noarch::colorama==0.4.4=pyhd3eb1b0_0
+  - defaults/noarch::decorator==4.4.2=pyhd3eb1b0_0
+  - defaults/noarch::ipython_genutils==0.2.0=pyhd3eb1b0_1
+  - defaults/noarch::parso==0.7.0=py_0
+  - defaults/noarch::pickleshare==0.7.5=pyhd3eb1b0_1003
+  - defaults/win-64::pywin32==228=py39he774522_0
+  - defaults/win-64::pyzmq==20.0.0=py39hd77b12b_1
+  - defaults/win-64::six==1.15.0=py39haa95532_0
+  - defaults/win-64::tornado==6.1=py39h2bbff1b_0
+  - defaults/noarch::wcwidth==0.2.5=py_0
+  - defaults/noarch::wheel==0.36.2=pyhd3eb1b0_0
+  - defaults/win-64::wincertstore==0.2=py39h2bbff1b_0
+  - defaults/win-64::jedi==0.17.2=py39haa95532_1
+  - defaults/noarch::python-dateutil==2.8.1=pyhd3eb1b0_0
+  - defaults/win-64::setuptools==52.0.0=py39haa95532_0
+  - defaults/noarch::traitlets==5.0.5=pyhd3eb1b0_0
+  - defaults/win-64::jupyter_core==4.7.1=py39haa95532_0
+  - defaults/win-64::pip==21.0.1=py39haa95532_0
+  - defaults/noarch::pygments==2.8.0=pyhd3eb1b0_0
+  - defaults/noarch::jupyter_client==6.1.7=py_0
+  - defaults/noarch::prompt-toolkit==3.0.8=py_0
+  - defaults/win-64::ipython==7.20.0=py39hd4e2768_1
+  - defaults/win-64::ipykernel==5.3.4=py39h7b7c402_0
+  - librosa
+  - jupyter
+  - jupyterlab
+  - speechrecognition
+  - pydub
+prefix: C:\Users\roso8920\Miniconda3\envs\isat

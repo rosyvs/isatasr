@@ -1,0 +1,4 @@
+data/sess/Room_1_yeti_sg11_day_1_pm_20210719-125109
+data/sess/Room_3_Yeti_sg1_day_1_am
+data/sess/room_3_yeti_sg1_day_4_am_20210715-092312
+data/sess/Room_3_Yeti_sg2_day_1_am
