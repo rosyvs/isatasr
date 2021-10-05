@@ -1,3 +1,3 @@
 data/sess/room_3_yeti_sg1_day_4_am_20210715-092312
 data/sess/Room 3 Sony sg1 day 4 am 210715_0923
-data/sess/
+data/sess/room 3 MXL SG1 SI Day 4 am part 2
