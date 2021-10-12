@@ -4,15 +4,17 @@ import re
 from rosy_asr_utils import *
 
 # Process .docx files: reduce and save in correct session directories
-transcriptDocxDir = os.path.normpath('C:/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted') # input
-sessDir = os.path.normpath('C:/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/sess') # where sessions are stored. Will output in separate /transcript dir per session dir. 
+transcriptDocxDir = os.path.expanduser(os.path.normpath('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted')) # input
+sessDir = os.path.normpath(os.path.expanduser('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/sess')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
 # ctl has list of paths transcripts to process
 
 blkList = []
 
 # loop over files and convert
 for file in os.listdir(transcriptDocxDir):
-    if not file.endswith('.docx'): continue
+    print(file)
+    if ((not file.endswith('.docx')) or (file.startswith('~'))): 
+        continue
     basename = re.sub('.docx', '', file)
     field = basename.split('_')
     blk = field[len(field)-1]

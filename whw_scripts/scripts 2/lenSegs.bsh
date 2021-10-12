@@ -1,0 +1,6 @@
+#
+SDIR=data/MathLessons/sess
+for sess in `ls $SDIR`
+do
+	python scripts/lenSegs.py $SDIR/$sess
+done

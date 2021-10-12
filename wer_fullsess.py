@@ -19,12 +19,9 @@ from rosy_asr_utils import *
 # verstr = 'shortseg_aggressive'
 # asrDirPattern = 'asr_shortseg_aggressive'
 
-args_ctl =os.path.join('configs', 'all_sess.txt')
-verstr = 'original_segmentation'
-asrDirPattern = 'asr_blockwise'
-
-
-
+args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
+verstr = 'async_recognize'
+asrDirPattern = 'asr_fullsess'
 
 with open(args_ctl) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 

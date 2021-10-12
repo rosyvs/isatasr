@@ -117,7 +117,7 @@ for sesspath in sesslist: # TEMP DEBUG
             now = datetime.now()
             datestr = now.strftime("%d-%m-%Y_%H%M%S")
             print(f"ASR blockwise dir already existed AND contains .asr files. Will back these up to {datestr}.zip then delete .asr files") 
-            shutil.make_archive(f'{asrBlockDir}_backup_{datestr}', 'zip', asrBlockDir)
+            shutil.make_archive(f'{asrBlockDir}_backup_{datestr}', 'zip', root_dir=asrBlockDir)
             for f in asr_already_here:
                 print(f'...deleting {f}')
                 os.remove(os.path.join(asrBlockDir, f))

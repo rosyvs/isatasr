@@ -1,0 +1,6 @@
+data/fall2021/Crystal_21-09-14_SI_L1_P1_yeti1.m4a
+data/fall2021/Crystal_21-09-14_SI_L1_P1_yeti3.m4a
+data/fall2021/Jamilla_21-09-20_SI_L3_P7-ipad5.m4a
+data/fall2021/Chris_21-09-28_SI_L2_p7_ipad5.m4a
+data/fall2021/Chris_21-09-28_SI_L2_p7_ipad5.m4a
+data/fall2021/Faye_21-09-23_SI_L1_P2_Sony1.mp3

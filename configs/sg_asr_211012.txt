@@ -1,0 +1,5 @@
+data/sess/Crystal_21-09-14_SI_L1_P1_yeti1/
+data/sess/Crystal_21-09-14_SI_L1_P1_yeti3/
+data/sess/Jamilla_21-09-20_SI_L3_P7-ipad5/
+data/sess/Chris_21-09-28_SI_L2_p7_ipad5/
+data/sess/Faye_21-09-23_SI_L1_P2_Sony1/

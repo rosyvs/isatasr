@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# scoreChunks.bsh <path to session>
+# tag chunks and compare to annotations
+
+. ./cmd.sh # . means source
+. ./path.sh
+set -e # make the script exit with an error whenever an error occurs (and is not explicitly handled)
+mfccdir=`pwd`/mfcc # backtick executes the command pwd
+vaddir=`pwd`/mfcc # confused why this isn't the directopry named vad, but this is the same in the kaldi official example
+
+sessDir=$1 # first argument given when calling scoreChunks.bsh from CL
+num_jobs=1
+
+trials=data/test/trials # contains audio? 
+nnet_dir=exp/xvector_nnet_1a
+
+stage=1 # you set this to determine where the pipeline starts from
+if [ $stage -le 1 ]; then #-le means less than or equual. see https://linuxhint.com/bash-test-command/
+  # remove old test data
+  rm -rf data/test
+
+  # make trials file
+  python ../scripts/mkTrials.py $1 --minlen 0.9 #? 
+
+  # create data file structure under data/test
+  local/make_talkback.pl $sessDir test data/test
+  #python ../scripts/mkData.py $1
+
+  # Make MFCCs and compute the energy-based VAD
+  echo 'make MFCCs'
+  for name in test ; do
+    steps/make_mfcc.sh --write-utt2num-frames true --mfcc-config conf/mfcc.conf --nj $num_jobs --cmd "$train_cmd" \
+      data/${name} exp/make_mfcc $mfccdir
+    #whw utils/fix_data_dir.sh data/${name}
+    sid/compute_vad_decision.sh --nj $num_jobs --cmd "$train_cmd" \
+      data/${name} exp/make_vad $vaddir
+    #whw utils/fix_data_dir.sh data/${name}
+  done
+fi
+
+# Extract x-vectors
+if [ $stage -le 2 ]; then
+  echo 'extract xvectors'
+  sid/nnet3/xvector/extract_xvectors.sh --cmd "$train_cmd --mem 4G" --nj $num_jobs \
+    $nnet_dir data/test \
+    $nnet_dir/xvectors_test
+fi
+
+if [ $stage -le 3 ]; then # series of commands piped together with |
+  echo 'compute PLDA scores'
+  $train_cmd exp/scores/log/test_scoring.log \
+    ivector-plda-scoring --normalize-length=true \
+    "ivector-copy-plda --smoothing=0.0 $nnet_dir/xvectors_train_combined_200k/plda - |" \
+    "ark:ivector-subtract-global-mean $nnet_dir/xvectors_train_combined_200k/mean.vec scp:$nnet_dir/xvectors_test/xvector.scp ark:- | transform-vec $nnet_dir/xvectors_train_combined_200k/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+    "ark:ivector-subtract-global-mean $nnet_dir/xvectors_train_combined_200k/mean.vec scp:$nnet_dir/xvectors_test/xvector.scp ark:- | transform-vec $nnet_dir/xvectors_train_combined_200k/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+    "cat '$trials' | cut -d\  --fields=1,2 |" exp/scores_test || exit 1; # write out to file 
+fi
+
+# whw disable
+#if [ $stage -le 4 ]; then
+if [ $stage -le 0 ]; then
+  echo 'find threshold for eer'
+  eer=`compute-eer <(local/prepare_for_eer.py $trials exp/scores_test) 2> /dev/null`
+  echo 'compute dcf'
+  mindcf1=`sid/compute_min_dcf.py --p-target 0.01 exp/scores_test $trials 2> /dev/null`
+  mindcf2=`sid/compute_min_dcf.py --p-target 0.001 exp/scores_test $trials 2> /dev/null`
+  echo "EER: $eer%"
+  echo "minDCF(p-target=0.01): $mindcf1"
+  echo "minDCF(p-target=0.001): $mindcf2"
+fi
+
+base=$(basename "$1")
+outfile=results/${base}.cs # used by tad_chunks
+mv exp/scores_test $outfile

@@ -1,6 +1,8 @@
 __pycache__/
 /data
 /media
+/testrecs
+/TAD_orig
 /workingWavs
 /.ipynb_checkpoints/
 /wer_time_testing

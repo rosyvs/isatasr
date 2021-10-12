@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
 # asrBlks.py  <ctl file of session paths>
 from __future__ import absolute_import
-import speech_recognition as sr
 import os
 import io
 import re
 import argparse
 import pandas as pd
-from google.cloud import speech
+#from google.cloud import speech
+from google.cloud import speech_v1p1beta1 as speech # need the beta for diarizaiton
+from google.cloud import storage
 import soundfile 
 import librosa
 import math
 from datetime import datetime
 import shutil
+import pathlib
 # enter below in terminal: 
 # set GOOGLE_APPLICATION_CREDENTIALS="isatasr-91d68f52de4d.json"
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json")
+storage_client = storage.Client.from_service_account_json("isatasr-91d68f52de4d.json", project='isatasr')
 
 # parser = argparse.ArgumentParser(description='run google_recognizer')
 # parser.add_argument('ctl')
@@ -24,142 +27,108 @@ client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.jso
 args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
 # args_ctl =os.path.join('configs', 'one_sess.txt')
 
-def transcribe_file(speech_file, client):
+def transcribe_file_async(speech_uri, client):
     """Transcribe the given audio file using Google cloud speech."""
 
-    with io.open(speech_file, "rb") as audio_file:
-        content = audio_file.read()
-
-
-    audio = speech.RecognitionAudio(content=content)
+    audio =speech.RecognitionAudio(uri=speech_uri); 
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=16000,
         language_code="en-US",
+        enable_speaker_diarization=True,
+        diarization_speaker_count=6,
         model="video"
     )
-    result=[]
-    try:
-        response = client.recognize(config=config, audio=audio)
-
+    transcript=[]
+    operation = client.long_running_recognize(config=config, audio=audio)
+    print('Waiting for recognition to complete...')
+    response = operation.result(timeout=3600)
     # Each result is for a consecutive portion of the audio. Iterate through
     # them to get the transcripts for the entire audio file.
-        for r in response.results:
-            # The first alternative is the most likely one for this portion.
-            best = r.alternatives[0].transcript
-            result.append(best)
-            print(best)
-    except Exception as ex:
-        print(f"An exception of type {type(ex).__name__} occurred.")
-        raise ex
+    for r in response.results:
+        # The first alternative is the most likely one for this portion.
+        best = r.alternatives[0].transcript
+        transcript.append(best)
+        print(best)
+        print(f"Confidence: {r.alternatives[0].confidence}")
 
-    return('\n'.join(result))
+    return transcript
+
+def create_bucket(bucket_name, storage_client):
+    """Create a new bucket in specific location with storage class"""
+    # bucket_name = "your-new-bucket-name"
+
+    bucket = storage_client.bucket(bucket_name)
+    if not bucket.exists():
+        bucket.storage_class = "STANDARD"
+        bucket = storage_client.create_bucket(bucket, location="us")
+        print(f"Created bucket {new_bucket.name} in {new_bucket.location} with storage class {new_bucket.storage_class}")
+    else:
+        print(f"Bucket {bucket_name} already existed")
+    return bucket
+
+def upload_blob(source_file_name, bucket_name, destination_blob_name, storage_client):
+    """Uploads a file to the bucket."""
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+    # The path to your file to upload
+    # source_file_name = "local/path/to/file"
+    # The ID of your GCS object
+    # destination_blob_name = "storage-object-name"
+    
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    print(f"Uploading {source_file_name} - please wait.")
+
+    ## For slow upload speed
+    storage.blob._DEFAULT_CHUNKSIZE = 2097152 # 10242 MB
+    storage.blob._MAX_MULTIPART_SIZE = 2097152 # 2 MB
+    blob.upload_from_filename(source_file_name,timeout=600.0)
+
+    print(f"File {source_file_name} uploaded.")
 
 # ctl has list of paths to sessions to process
 #for sesspath in open(args.ctl):
 with open(args_ctl) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
-    sesslist = list(line for line in sesslist if line)
+    sesslist = list(os.path.normpath(line) for line in sesslist if line)
 
 for sesspath in sesslist: # TEMP DEBUG
     print(f'sesspath: {sesspath}')
     sesspath = sesspath.strip()
-    tagfile = os.path.join(sesspath, 'seg.tag')
-    wavDir = os.path.join(sesspath, 'segments')
     sessname = os.path.basename(sesspath)
-    asrDir = os.path.join(sesspath,'asr_segwise')
-    asrBlockDir = os.path.join(sesspath,'asr_blockwise')
-    blkMap = pd.read_csv(os.path.join(sesspath,f'{sessname}.blkmap'), sep='\s+', header=None, names = ['segments','block'])
-    s2bMap = {}
-    for _, row in blkMap.iterrows():
-        block = row['block']
-        segments = [int(s) for s in row['segments'].split(',')]
-        for i in segments:
-            s2bMap[i] = block
-
-    # get list of files to transcribe
-    wavList = []
-    for file in os.listdir(wavDir):
-        if not file.endswith('.wav'): continue
-        base = re.sub('.wav', '', file)
-        field = base.split('_')
-        sg = field[len(field)-1]
-        wavList.append( int(sg) )
-    wavList.sort()
-    
-    # # TEMP DEBUG
-    # wavList = wavList[0:4] # run on a small subset to save compute time
-    # # \TEMP DEBUG
+    asrDir = os.path.join(sesspath,'asr_fullsess')
 
     # check if asr files already exist, if so, zip them up to make a backup then delete   
     if not os.path.exists(asrDir):
         os.makedirs(asrDir)
-    else: 
-        asr_already_here = os.listdir(asrDir)
-        if len(asr_already_here) == 0:
-            print("ASR dir already existed but is empty. Will proceed.")
-        else:
-            now = datetime.now()
-            datestr = now.strftime("%d-%m-%Y_%H%M%S")
-            print(f"ASR dir already existed AND contains .asr files. Will back these up to {datestr}.zip then delete .asr files") 
-            shutil.make_archive(f'{asrDir}_backup_{datestr}', 'zip', asrDir)
-            for f in asr_already_here:
-                print(f'...deleting {f}')
-                os.remove(os.path.join(asrDir, f))
+    
+    # check if asr file already existed, and backup if so
+    if os.path.isfile(asrfile):
+        now = datetime.now()
+        datestr = now.strftime("%d-%m-%Y_%H%M%S")
+        zipfile = shutil.make_archive(base_name =os.path.join(asrDir,f'backup_{datestr}_{pathlib.Path(asrfile).stem}'), 
+        format='zip', 
+        root_dir = asrDir,
+        base_dir = os.path.basename(asrfile))
 
-    if not os.path.exists(asrBlockDir):
-        os.makedirs(asrBlockDir)
-    else: 
-        asr_already_here = os.listdir(asrBlockDir)
-        if len(asr_already_here) == 0:
-            print("ASR blockwise dir already existed but is empty. Will proceed.")
-        else:
-            now = datetime.now()
-            datestr = now.strftime("%d-%m-%Y_%H%M%S")
-            print(f"ASR blockwise dir already existed AND contains .asr files. Will back these up to {datestr}.zip then delete .asr files") 
-            shutil.make_archive(f'{asrBlockDir}_backup_{datestr}', 'zip', asrBlockDir)
-            for f in asr_already_here:
-                print(f'...deleting {f}')
-                os.remove(os.path.join(asrBlockDir, f))
-
-    for s in wavList:
-        res=''
-
-    # identify block for this segment
-        try:
-            b = s2bMap[s]
-        except: 
-            print(f'no block found for segment: {sessname} {s}')
-            continue
+        print(f"ASR already existed. Backed the file up to {zipfile}") 
+        os.remove(asrfile)
         
-        wavfile = os.path.join(wavDir, f'{sessname}_{s}.wav')
-        # check duration - if >1min split buffer into two then reconcatenate. in future would be nice to do on stream rather than writing wav
-        if librosa.get_duration(filename=wavfile) >59:
-            print(f'{sessname}_{s} Audio > 1 minute - will split for transcription')
-            tmpWavDir = './workingWavs'
-            if not os.path.exists(tmpWavDir):
-                os.makedirs(tmpWavDir)
-            wavaudio , fs = soundfile.read(wavfile)
-            nfiles = math.ceil(wavaudio.size/(59*fs))
-            print(f'splitting into {nfiles} files')
-            reslist=[]
-            for i in range(0,nfiles):
-                truncated = wavaudio[i*59*fs:(i+1)*59*fs]
-                wavfile_trunc = os.path.join(tmpWavDir,f'{os.path.basename(wavfile)}-{i}.wav')
-                soundfile.write(wavfile_trunc,truncated, fs)
-                reslist.append(transcribe_file(wavfile_trunc, client))
-            res = ' '.join(reslist)
-        else:    
-            res = transcribe_file(wavfile, client)
-        print('%s_%d' % (sessname,s), res)
+    wav_local_path = os.path.join(f'{sesspath}/{sessname}.wav')
+    wav_uri = f"gs://isat_mictest/{sessname}.wav"
+    bucket = storage_client.get_bucket('isat_mictest')
+    # check whether file is already uploaded:
+    blob = bucket.get_blob(f'{sessname}.wav')
+    if blob is None:        
+        create_bucket('isat_mictest', storage_client)
+        upload_blob(wav_local_path,'isat_mictest',f'{sessname}.wav', storage_client)
 
-        # write segmentwise asr result
-        asrfile = os.path.join(asrDir, f"{sessname}_{s}.asr")
-        with open(asrfile,'w') as outfile:
-            outfile.write(res + '\n')
-
-        # append segment asr transcripts to the coresponding block
-        asrblockfile = os.path.join(asrBlockDir, f"{sessname}_{b}.asr")
-        with open(asrblockfile,'a') as outfile:
-            outfile.write(res + '\n')
+    res = transcribe_file_async(wav_uri, client)
+    
+    # write whole session asr result
+    asrfile = os.path.join(asrDir, f"{sessname}.asr")
+    with open(asrfile,'w') as outfile:
+        outfile.write('\n'.join(res))
+        
 
