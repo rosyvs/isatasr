@@ -119,7 +119,7 @@ for sesspath in sesslist: # TEMP DEBUG
     if blob is None:        
         create_bucket('isat_mictest', storage_client)
         upload_blob(wav_local_path,'isat_mictest',f'{sessname}.wav', storage_client)
-    res = transcribe_file_async(wav_uri, client, srate)
+    res = transcribe_file_async(wav_uri, client)
     
     # write whole session asr result
     asrfile = os.path.join(asrDir, f"{sessname}.asr")
