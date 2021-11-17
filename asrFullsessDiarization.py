@@ -23,7 +23,7 @@ storage_client = storage.Client.from_service_account_json("isatasr-91d68f52de4d.
 args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
 # args_ctl =os.path.join('configs', 'one_sess.txt')
 
-def transcribe_file_async(speech_uri, client):
+def transcribe_diarize_file_async(speech_uri, client):
     """Transcribe the given audio file using Google cloud speech."""
 
     audio =speech.RecognitionAudio(uri=speech_uri); 
@@ -123,7 +123,7 @@ for sesspath in sesslist: # TEMP DEBUG
         create_bucket('isat_mictest', storage_client)
         upload_blob(wav_local_path,'isat_mictest',f'{sessname}.wav', storage_client)
 
-    transcript, words = transcribe_file_async(wav_uri, client)
+    transcript, words = transcribe_diarize_file_async(wav_uri, client)
 
     # save
     csvfile=os.path.join(asrDir, f"{sessname}_diarized.csv")
