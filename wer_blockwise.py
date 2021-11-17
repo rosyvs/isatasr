@@ -8,7 +8,7 @@ import numpy as np
 from rosy_asr_utils import *
 
 # loop over sessions in control file and compute WER for any with both ASR and REV transcripts at the block level
-args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
+args_ctl =os.path.join('configs', 'sg_asr_211012.txt')
 
 with open(args_ctl) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -27,8 +27,8 @@ for sesspath in sesslist:
         if not file.endswith('.asr'): continue
         base = re.sub('.asr', '', file)
         field = base.split('_')
-        sg = field[len(field)-1]
-        blklist.append( int(sg) )
+        b= field[len(field)-1]
+        blklist.append( int(b) )
     blklist.sort()
     print(f'-{len(blklist)} blocks found')
 

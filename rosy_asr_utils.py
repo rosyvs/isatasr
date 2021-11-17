@@ -13,7 +13,8 @@ import webrtcvad # Parts of this pipeline based on py-webrtcvad The MIT License 
 import os
 import argparse
 from pydub import AudioSegment
-import pypandoc
+from google.cloud import speech
+
 
 ######################
 # blocking, segmenting, VAD and TAD functions
@@ -26,7 +27,7 @@ def read_wave(path):
         sample_width = wf.getsampwidth()
         assert sample_width == 2
         sample_rate = wf.getframerate()
-        assert sample_rate in (8000, 16000, 32000)
+        assert sample_rate in (8000, 16000, 32000, 48000)
         pcm_data = wf.readframes(wf.getnframes())
         return pcm_data, sample_rate
 
@@ -56,13 +57,10 @@ def frame_generator(frame_duration_ms, audio, sample_rate):
         timestamp += duration
         offset += n
 
-
-
 def vad_collector(sample_rate, frame_duration_ms,
-                  padding_duration_ms, vad, frames, max_segment_dur = 60000):
-    num_padding_frames = int(padding_duration_ms / frame_duration_ms)
+                  padding_duration_ms, vad, frames, min_seg_dur = 2000):
     # Filter out non-voiced audio frames.
-    # Uses a padded sliding window (rind buffer) over the audio frames.
+    # Uses a padded sliding window (ring buffer) over the audio frames.
     # Trigger when more than 90% of the frames in the window are voiced
     # Detrigger when 90% of the frames in the window are unvoiced
     # pads with small amount of silence at start and end
@@ -72,10 +70,12 @@ def vad_collector(sample_rate, frame_duration_ms,
     # padding_duration_ms - The amount to pad the window, in milliseconds.
     # vad - An instance of webrtcvad.Vad.
     # frames - a source of audio frames (sequence or generator).
+    # min_seg_dur - minimum segment duration
     # use a deque for sliding window/ring buffer.
     # Parts of this pipeline based on py-webrtcvad The MIT License (MIT) Copyright (c) 2016 John Wiseman
-    ring_buffer = collections.deque(maxlen=num_padding_frames)
     seg_info = []
+    num_padding_frames = int(padding_duration_ms / frame_duration_ms)
+    ring_buffer = collections.deque(maxlen=num_padding_frames)
 
     #  start in the NOTTRIGGERED state.
     triggered = False
@@ -91,8 +91,6 @@ def vad_collector(sample_rate, frame_duration_ms,
 
         if not triggered:
             ring_buffer.append((frame, is_speech))
-            num_voiced = len([f for f, speech in ring_buffer if speech])
-
             # If more than 90% of the frames in buffer are voiced, TRIGGER
             num_voiced = len([f for f, speech in ring_buffer if speech])
             if num_voiced > 0.9 * ring_buffer.maxlen:
@@ -114,7 +112,7 @@ def vad_collector(sample_rate, frame_duration_ms,
             # If more than 90% of the frames in the ring buffer are
             # unvoiced, then enter NOTTRIGGERED and yield whatever
             # audio we've collected.
-            if num_unvoiced > 0.9 * ring_buffer.maxlen:
+            if (num_unvoiced > 0.9 * ring_buffer.maxlen) and (len(voiced_frames) >= min_seg_dur/frame_duration_ms):
                 triggered = False
 
                 seg_end = frame.timestamp
@@ -133,9 +131,9 @@ def vad_collector(sample_rate, frame_duration_ms,
         yield (b''.join([f.bytes for f in voiced_frames]) , seg_info)
         numseg += 1
 
-
-def segment_coverage(segfile, sesswav):
+def segment_coverage_legacy(segfile, sesswav):
     # computes % coverage of VAD-detected segments relative to the original full session file
+    # old version using .seg files
     sess_duration = AudioSegment.from_file(sesswav).duration_seconds
     segmap = pd.read_csv(segfile, 
     sep='\s+', header=None, index_col=False, 
@@ -145,6 +143,51 @@ def segment_coverage(segfile, sesswav):
     seg_total_dur = segmap.sum()['duration']
     coverage = seg_total_dur/sess_duration
     return coverage
+
+def segment_coverage(blkfile, sesswav):
+    # computes % coverage of VAD-detected segments relative to the original full session file
+    # old version using .seg files
+    sess_duration = AudioSegment.from_file(sesswav).duration_seconds
+    blkmap = pd.read_csv(blkfile, 
+    sep='\s+', header=None, index_col=False, 
+    dtype={0:'int',1:'int',2:'float',3:'float'},
+    names = ['block','segment','start_s','end_s']) 
+    blkmap['duration'] = blkmap['end_s'] - blkmap['start_s']
+    seg_total_dur = blkmap.sum()['duration']
+    coverage = seg_total_dur/sess_duration
+    return coverage
+
+######################
+# ASR functions
+######################
+
+def transcribe_bytestream(bytes, client,srate):
+    """Transcribe the given audio bytestream using Google cloud speech."""
+
+    audio = speech.RecognitionAudio(content=bytes)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=srate,
+        language_code="en-US",
+        model="video"
+    )
+    result=[]
+    try:
+        response = client.recognize(config=config, audio=audio)
+
+    # Each result is for a consecutive portion of the audio. Iterate through
+    # them to get the transcripts for the entire audio file.
+        for r in response.results:
+            # The first alternative is the most likely one for this portion.
+            best = r.alternatives[0].transcript
+            result.append(best)
+            print(best)
+    except Exception as ex:
+        print(f"An exception of type {type(ex).__name__} occurred.")
+        raise ex
+
+    return('\n'.join(result))
+
 
 ######################
 # text formatting and WER functions
@@ -260,26 +303,26 @@ def align_words(ref,hyp):
     for [i,ops] in edit_ops.iterrows():
         if ops['operation'] == 'insert':
             aligned_ref.insert(ins_count+ops['transcript_ix'],'_')
-            aligned_ops.insert(ins_count+ops['transcript_ix'],'+')
-            aligned_ref_ix.insert(ins_count+ops['transcript_ix'],np.NaN)
+            aligned_ops.insert(ins_count+ops['transcript_ix'],'ins')
+            aligned_ref_ix.insert(ins_count+ops['transcript_ix'],None)
             ix_edit_ops.insert(ins_count+ops['transcript_ix'],i)
             ins_count = ins_count+1
 
         if ops['operation'] == 'delete':
             aligned_hyp.insert(del_count+ops['asr_ix'],'_')
-            aligned_ops[ins_count + ops['transcript_ix']] = '-'
-            aligned_hyp_ix.insert(del_count+ops['asr_ix'],np.NaN)
+            aligned_ops[ins_count + ops['transcript_ix']] = 'del'
+            aligned_hyp_ix.insert(del_count+ops['asr_ix'],None)
             ix_edit_ops[ins_count + ops['transcript_ix']] = i
             del_count=del_count+1
 
         if ops['operation'] == 'replace':
-            aligned_ops[ins_count+ ops['transcript_ix']] ='<>' 
+            aligned_ops[ins_count+ ops['transcript_ix']] ='sub' 
             ix_edit_ops[ins_count+ ops['transcript_ix']] =i
            
 
     aligned = pd.DataFrame({
-        'ref_ix':aligned_ref_ix,
-        'hyp_ix':aligned_hyp_ix,
+        'ref_ix':[int(x) if x else None for x in aligned_ref_ix ],
+        'hyp_ix':[int(x) if x else None for x in aligned_hyp_ix ],
         'reference':aligned_ref,
         'hypothesis' : aligned_hyp ,
         'operation' : aligned_ops,
@@ -287,3 +330,16 @@ def align_words(ref,hyp):
 
     return aligned, edit_ops
 
+def wer_from_counts(N, sub_count, del_count, ins_count):
+    '''
+    Computes WER and related measures from edit operation counts and reference wordcount
+    Useful to recompute measures without needing raw text
+    '''
+    meas = {'wer': (sub_count + del_count + ins_count)/N,
+            'mer': 1 - (N - sub_count - del_count)/N,
+            'hits': N - sub_count - del_count ,
+            'sub_rate': sub_count/N,
+            'del_rate': del_count/N,
+            'ins_rate': ins_count/N
+            }
+    return meas

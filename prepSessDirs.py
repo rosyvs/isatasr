@@ -2,16 +2,13 @@ from rosy_asr_utils import *
 from pathlib import Path
 from pydub import AudioSegment
 import os 
+import shutil
 
-args_ctl =os.path.join('configs', 'toblock_2021-10-04.txt')
-# convert session audio to WAV and place in session directories
+args_ctl =os.path.join('configs', 'sess2wav_5SGcodecs.txt')
+# take "loose" WAVs from a single dir and place in session directories
 
-# options
-channels = 1
-sample_width = 2
-sample_rate = 48000
-bit_depth = 16
-sess_base_dir = './data/sess/' # where to export session subdirectories
+
+sess_base_dir = './data/comparison_codecs/' # where to export session subdirectories
 
 # args_ctl has list of paths to sessions to process
 with open(args_ctl) as ctl:
@@ -30,10 +27,11 @@ for sess in sesslist:
     if not os.path.exists(sesspath):
         os.makedirs(sesspath)
 
-    aud = AudioSegment.from_file(sess)
+    # aud = AudioSegment.from_file(sess)
     wav_path = os.path.join(sesspath,f'{sessname}.wav')
 
-    new_audio = aud.set_channels(channels)
-    new_audio = aud.set_frame_rate(sample_rate)
-    new_audio.export(wav_path, format='wav')
+    # new_audio.export(wav_path, format='wav')
+
+    shutil.copyfile(sess, wav_path)
+
 

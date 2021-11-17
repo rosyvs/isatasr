@@ -13,12 +13,12 @@ import csv
 # options
 channels = 1
 sample_width = 2
-sample_rate = 16000
+sample_rate = 48000
 bit_depth = 16
 
 datadir = './data/sess/'
-outdir_stem = 'sg_excerpts'
-csvfile = './configs/sg_to_extract.csv'
+outdir_stem = './data/id_labelled/'
+csvfile = './configs/sg_to_extract2.csv'
 
 with open(csvfile, 'r', newline='') as in_file:
     reader = csv.reader(in_file)
@@ -41,7 +41,7 @@ with open(csvfile, 'r', newline='') as in_file:
 
 
         sessdir = os.path.join(datadir, sessname)
-        outdir = os.path.join(outdir_stem, sessdir)
+        outdir = os.path.join(outdir_stem, f'{sessname}_ex{excerpt_no}')
         if not os.path.exists(outdir):
             os.makedirs(outdir)
         outfile = os.path.join(outdir,f'{sessname}_ex{excerpt_no}.wav')

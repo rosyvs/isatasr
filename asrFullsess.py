@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# asrBlks.py  <ctl file of session paths>
 from __future__ import absolute_import
 import os
 import io
@@ -9,14 +7,11 @@ import pandas as pd
 #from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speech # need the beta for diarizaiton
 from google.cloud import storage
-import soundfile 
-import librosa
 import math
 from datetime import datetime
 import shutil
 import pathlib
-# enter below in terminal: 
-# set GOOGLE_APPLICATION_CREDENTIALS="isatasr-91d68f52de4d.json"
+
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json")
 storage_client = storage.Client.from_service_account_json("isatasr-91d68f52de4d.json", project='isatasr')
 
@@ -33,7 +28,6 @@ def transcribe_file_async(speech_uri, client):
     audio =speech.RecognitionAudio(uri=speech_uri); 
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
         language_code="en-US",
         enable_speaker_diarization=True,
         diarization_speaker_count=6,
@@ -104,16 +98,18 @@ for sesspath in sesslist: # TEMP DEBUG
         os.makedirs(asrDir)
     
     # check if asr file already existed, and backup if so
-    if os.path.isfile(asrfile):
-        now = datetime.now()
-        datestr = now.strftime("%d-%m-%Y_%H%M%S")
-        zipfile = shutil.make_archive(base_name =os.path.join(asrDir,f'backup_{datestr}_{pathlib.Path(asrfile).stem}'), 
-        format='zip', 
-        root_dir = asrDir,
-        base_dir = os.path.basename(asrfile))
+    if os.path.exists(asrDir):
+        asrfile = os.path.join(asrDir, f"{sessname}.asr")
+        if os.path.isfile(asrfile):
+            now = datetime.now()
+            datestr = now.strftime("%d-%m-%Y_%H%M%S")
+            zipfile = shutil.make_archive(base_name =os.path.join(asrDir,f'backup_{datestr}_{pathlib.Path(asrDir).stem}'), 
+            format='zip', 
+            root_dir = asrDir,
+            base_dir = os.path.basename(asrDir))
 
-        print(f"ASR already existed. Backed the file up to {zipfile}") 
-        os.remove(asrfile)
+            print(f"ASR already existed. Backed the file up to {zipfile}") 
+            os.remove(asrDir)
         
     wav_local_path = os.path.join(f'{sesspath}/{sessname}.wav')
     wav_uri = f"gs://isat_mictest/{sessname}.wav"
@@ -123,8 +119,7 @@ for sesspath in sesslist: # TEMP DEBUG
     if blob is None:        
         create_bucket('isat_mictest', storage_client)
         upload_blob(wav_local_path,'isat_mictest',f'{sessname}.wav', storage_client)
-
-    res = transcribe_file_async(wav_uri, client)
+    res = transcribe_file_async(wav_uri, client, srate)
     
     # write whole session asr result
     asrfile = os.path.join(asrDir, f"{sessname}.asr")
