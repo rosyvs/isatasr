@@ -20,14 +20,14 @@ import io
 #          |--{sessname}_{segment_no}.wav
 
 
-args_ctl =os.path.join('configs', '4SG.txt') # this is the control file - this is a .txt file containing list of paths to sessions rel to this script
+args_ctl =os.path.join('configs', os.path.join('configs', '4SG.txt')) # this is the control file - this is a .txt file containing list of paths to sessions rel to this script
 
 # segmentation options
-agg = 1 # aggressiveness
+agg = 1 # aggressiveness of VAD
 frame_msec = 30 # frame length sent to VAD
 win_size = 300 # ms, ring buffer used for VAD 
 min_seg_dur = 2000 # ms. minimum segment duration
-blksecs = 59 # Google has refused some blocks if exactly 60 seconds 
+blksecs = 59 # Google ASR has refused some blocks if exactly 60 seconds 
 split_overlap = 1 # for long segments, overlap by this duration in seconds to avoid word splitting
 # .wav audio output options:
 channels = 1 # audio channels
@@ -79,6 +79,7 @@ for sesspath in sesslist:
 
             # Note that soon an XVector-based target activity filter will be inserted at this point to select segments to keep
 
+            ## Concatenate segments to form blocks - economical for sending to REV
             # split segments longer than requested block duration
             if dur > blksecs:
                 nsplits = int(np.floor((dur-split_overlap)/(blksecs-split_overlap)))
@@ -124,8 +125,11 @@ for sesspath in sesslist:
                 # complete block and write audio
                 blkwavpath = os.path.join(blkDir,f'{wbasename}_{blknum}.wav' )
                 this_block.export(blkwavpath, format='wav')
+
+                # write segment audio
                 segwavpath = os.path.join(segDir,f'{wbasename}_{added_segs+snum}.wav' )
                 seg_audio.export(segwavpath, format='wav') 
+
                 # start new audio block
                 blknum += 1
                 this_block = AudioSegment.empty()

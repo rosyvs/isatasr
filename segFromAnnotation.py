@@ -81,7 +81,8 @@ with open(csvfile, 'r', newline='') as in_file:
         start_HHMMSS,speaker,utterance,end_HHMMSS = utt
         # clean up speaker and utterance for ASR
         speaker = re.sub(' ','',speaker)
-        utterance_clean =     re.sub("[\(\[].*?[\)\]]", " ", utterance)
+        speaker = re.sub(':','',speaker)
+        utterance_clean = re.sub("[\(\[].*?[\)\]]", " ", utterance)
         utterance_clean = strip_punct(utterance_clean) 
         start_sec = HHMMSS_to_sec(start_HHMMSS)-utt_padding
         end_sec = HHMMSS_to_sec(end_HHMMSS)+utt_padding

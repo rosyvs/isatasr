@@ -4,8 +4,8 @@ import re
 from rosy_asr_utils import *
 
 # Process .docx files: reduce and save in correct session directories
-transcriptDocxDir = os.path.expanduser(os.path.normpath('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted')) # input
-sessDir = os.path.normpath(os.path.expanduser('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/sess/')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
+transcriptDocxDir = os.path.expanduser(os.path.normpath('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted/Crystal-deepSample/')) # input
+sessDir = os.path.normpath(os.path.expanduser('~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/deepSample/')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
 # ctl has list of paths transcripts to process
 
 blkList = []
@@ -16,9 +16,11 @@ for file in os.listdir(transcriptDocxDir):
     if ((not file.endswith('.docx')) or (file.startswith('~'))): 
         continue
     basename = re.sub('.docx', '', file)
-    field = basename.split('_')
-    blk = field[len(field)-1]
-    sessName = '_'.join(field[0:-1])
+    # UNCOMMENT FOR BLOCK VERSION:
+    # field = basename.split('_')
+    # blk = field[len(field)-1]
+    # sessName = '_'.join(field[0:-1])
+    sessName = basename
     transcriptDir = os.path.join(sessDir, sessName, 'transcripts')
 #     field = sess.split('_')
 #     blk = field[len(field)-1]
@@ -52,5 +54,9 @@ for file in os.listdir(transcriptDocxDir):
     #     outfile.write('\n'.join(doc_stripped))
 
 
+# UNCOMMENT FOR BLOCK VERSION:
+    # norm_transcript(docx_fname=os.path.join(transcriptDocxDir ,file), 
+    #                 txt_fname=os.path.join(transcriptDir, f"{sessName}_{blk}.txt"))
+
     norm_transcript(docx_fname=os.path.join(transcriptDocxDir ,file), 
-                    txt_fname=os.path.join(transcriptDir, f"{sessName}_{blk}.txt"))
+                txt_fname=os.path.join(transcriptDir, f"{sessName}.txt"))

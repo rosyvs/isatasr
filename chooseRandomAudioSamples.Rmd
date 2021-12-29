@@ -1,0 +1,209 @@
+---
+title: "chooseRandomSGSamples"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load/Install Packages
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+packages <- c('sjPlot', 'reshape2', 'magrittr', 'data.table', 'gridExtra', 'ggplot2','stringr','readxl','gridExtra','ggpubr','tidyverse', 'dplyr','tidyr','strex','tibble','chron','lubridate','anytime','hms')
+ipak(packages)
+
+```
+
+Given the data catalog (https://docs.google.com/spreadsheets/d/1Xs5jM9yGRmRbrSxjrRFIUpzbfb-MdcGOi_FyJen6MXk)
+Generate random 3-minute samples under the following constraints
+- must have a small-group start and end time
+- small-group duration must be greater than sample duration
+- must sample evenly across teachers
+- must sample randomly across groups, omitting those without student names
+- must sample randomly across lessons
+
+```{r options}
+opts.NperTeacher = 4
+opts.Duration = 180 # seconds
+
+sheets <- excel_sheets('../Data File Catalog_2021-12-13.xlsx')
+enrollment_check <- read_xlsx('../Data File Catalog_2021-12-13.xlsx', sheet = 'Enrollment Check')
+audio_sheets <- sheets %>% str_subset(pattern = "Audio")
+```
+
+
+
+```{r loop_over_teachers}
+sample_all <- data.frame()
+stats.wide.SGduration <- list()
+count=0
+dtypes = c('text', 'text',
+           'text', 'text',
+           'text', 'text',
+           'text',  'date',   'date','date',
+           'date','guess','guess','guess',
+           'guess','date',  'list','text','text','guess','guess','logical','text')
+
+for (sheet in audio_sheets){
+  count=count+1
+  df <- read_xlsx('../Data File Catalog_2021-12-13.xlsx', sheet = sheet, na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
+  names(df) <- names(df) %>% make.names() 
+  if (nrow(df) == 0) next
+  
+  df <- df %>% filter(!grepl('End',Group.End.Time))
+  
+  if (class(df$Group.End.Time)=='character'){df$Group.End.Time <- as.POSIXlt(df$Group.End.Time)}
+  
+  df <- df %>% mutate_at(c('Record.Start.Time', 'Group.Start.Time','Group.End.Time', 'Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as_hms)
+  
+  # some of the files do not yet have the small groups start/end time manually verified.
+  # fill in Timestamps of small group start/end using Group.Start.Time when missing the timestamp
+  df$Timestamp.of.Small.Group.Start[is.na(df$Timestamp.of.Small.Group.Start)] <- as_hms(df$Group.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)])
+  
+  df$Timestamp.of.Small.Group.End[is.na(df$Timestamp.of.Small.Group.End)] <- as_hms(df$Group.End.Time[is.na(df$Timestamp.of.Small.Group.End)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.End)])
+  
+  # replace negative timestamps with 0 (this means smallgroup started before recording)
+  df$Timestamp.of.Small.Group.Start[df$Timestamp.of.Small.Group.Start <0] <- hms(0,0,0)
+  
+  # Drop rows which still don't have timestamps for both start and end of small groups
+  df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End, Names.of.Students))
+  
+
+  df$Small.Group.Duration <- df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start 
+  
+  stats.wide.SGduration <-c(stats.wide.SGduration, unlist(df$Small.Group.Duration))
+
+   # Drop rows with insufficient SG duration
+  df <- df %>% filter(Small.Group.Duration>= opts.Duration)
+  
+# drop rows with issues - do this once Cher says thecolumn has been updated
+ df <- df %>% filter(Issues..0.No..1.Yes. == F)
+if (nrow(df) < opts.NperTeacher) {print('INSUFFICIENT AUDIO TO GENERATE REQUESTED N SAMPLES') 
+  next}
+  
+  # randomly choose rows for this teacher
+  samp_i <- sample(nrow(df), opts.NperTeacher, replace=F)
+  sample_this <- df[samp_i,]
+  
+  # randomly generate sample start times for each row
+  for (s in 1:nrow(sample_this)){
+    thisrow <- sample_this[s,]
+    sample_this$sample_start[s] <- hms(round(runif(1, as.duration(thisrow$Timestamp.of.Small.Group.Start), as.duration(thisrow$Timestamp.of.Small.Group.End-opts.Duration))))
+    sample_this$sample_end[s] <- as_hms(sample_this$sample_start[s]+hms(opts.Duration))
+    
+  }
+  sample_this$sample_start <- as_hms(sample_this$sample_start)
+  sample_this$sample_end <- as_hms(sample_this$sample_end)
+  
+  sample_all <- bind_rows(sample_all, sample_this)
+  
+}
+
+# sample_all$Names.of.Students <- lapply(sample_all$Names.of.Students,paste,collapse = ", ")
+sample_all <- sample_all %>%  mutate(Names.of.Students = gsub("\n", ", ", Names.of.Students))
+
+sample_all <- sample_all %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, sample_start, sample_end, everything()))
+sample_all %>% write.csv('samples_wide_2021-12-14.csv')
+
+stats.wide.SGcount = nrow(stats.wide.SGduration)
+stats.wide.SGduration.total = duration(sum(unlist(stats.wide.SGduration),na.rm=T))
+stats.wide.SGduration.mean = duration(mean(unlist(stats.wide.SGduration),na.rm=T))
+stats.wide.SGduration.sd = duration(sd(unlist(stats.wide.SGduration),na.rm=T))
+print(stats.wide.SGcount.total)
+print(stats.wide.SGduration.total)
+print(stats.wide.SGduration.mean)
+print(stats.wide.SGduration.sd)
+
+```
+
+FOCUSSED SAMPLE
+Crystal Q2 video
+```{r}
+dtypes = c('list', 'text', 'text', 'text', 'text', 'text', 'text',  'text','date','guess','guess','guess', 'guess','text','text','guess','guess','logical','text')
+
+ df <- read_xlsx('../Data File Catalog_2021-12-13.xlsx', sheet = 'Sample 1 - Focused', na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
+  names(df) <- names(df) %>% make.names() 
+
+  df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End, Student.in.Group))
+
+  df <- df %>% mutate_at(c( 'Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as_hms)
+
+  df$Small.Group.Duration <- df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start 
+  # Drop rows with insufficient SG duration
+  df <- df %>% filter(Small.Group.Duration>= opts.Duration)
+  
+ # drop rows with issues
+ df$Issues..0.No..1.Yes.[is.na(df$Issues..0.No..1.Yes.)] <- FALSE # if not true, assume false
+ df <- df %>% filter(Issues..0.No..1.Yes. == F)
+  
+ sample_this <- df # generate samples for all rows
+  
+  # randomly generate sample start times for each row
+  for (s in 1:nrow(sample_this)){
+    thisrow <- sample_this[s,]
+    sample_this$sample_start[s] <- hms(round(runif(1, as.duration(thisrow$Timestamp.of.Small.Group.Start), as.duration(thisrow$Timestamp.of.Small.Group.End-opts.Duration))))
+    sample_this$sample_end[s] <- as_hms(sample_this$sample_start[s]+hms(opts.Duration))
+    
+  }
+  sample_this$sample_start <- as_hms(sample_this$sample_start)
+  sample_this$sample_end <- as_hms(sample_this$sample_end)
+  
+sample_this <- sample_this %>%  mutate(Student.in.Group = gsub("\n", ", ", Student.in.Group))
+
+sample_this %>% write.csv('samples_focused_2021-12-14.csv')
+
+stats.focused.SGduration.total = dseconds(sum(as.numeric(df$Small.Group.Duration),na.rm=T))
+stats.focused.SGduration.mean = dseconds(mean(as.numeric(df$Small.Group.Duration),na.rm=T))
+stats.focused.SGduration.sd = dseconds(sd(as.numeric(df$Small.Group.Duration),na.rm=T))
+print(stats.focused.SGduration.total)
+print(stats.focused.SGduration.mean)
+print(stats.focused.SGduration.sd)
+```
+
+
+
+
+# Generate 5*1-minute samples for Crystal's video, in center of small-group range.
+In center of range:
+- Find exact midpoint of small-group 
+- Choose a range of 5 minutes which includes this midpoint but does not hang over the ends of the recording
+- if SG duration < 5 min, use whole range
+
+
+
+```{r}
+sample_5x1 <- list()
+count=0
+opts.Duration <- 300
+opts.ChunkBy <- 60
+opts.nChunk = opts.Duration/opts.ChunkBy
+ # randomly generate sample start times for each row
+  for (s in 1:nrow(df)){
+    thisrow <- df[s,]
+   if (hms(opts.Duration) > as_hms(thisrow$Small.Group.Duration)){
+   print('***WARNING*** insufficient audio')}
+    
+   sample_start_block <- hms(round(as.duration(
+     runif(
+       1,
+       max(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration) - as_hms(opts.Duration)), thisrow$Timestamp.of.Small.Group.Start),
+       min(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration)), as_hms(thisrow$Timestamp.of.Small.Group.End-as_hms(opts.Duration)) ))
+   )))
+
+   
+   for (i in 1:(opts.nChunk)){
+     count=count+1
+     rowtoadd <- thisrow %>% select(c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ))
+     rowtoadd$Small.Group.Duration <- as_hms(rowtoadd$Small.Group.Duration)
+     rowtoadd$sample_start<- as_hms(sample_start_block + hms(opts.ChunkBy*(i-1)))
+     rowtoadd$sample_end<- as_hms(rowtoadd$sample_start+hms(opts.ChunkBy))
+     sample_5x1[[count]] <- rowtoadd
+   }
+    
+      
+  }
+sample_5x1 <- bind_rows(sample_5x1)%>% write.csv('../annotation/samples_focussed_5inCenter_2021-12-16.csv')
+```

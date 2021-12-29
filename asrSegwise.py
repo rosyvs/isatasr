@@ -40,7 +40,6 @@ for sesspath in sesslist:
 
     audio = AudioSegment.from_file(wavfile)
     srate = audio.frame_rate
-    print(f'srate:{srate}')
 
     # check if asr files already exist, if so, zip them up to make a backup then delete   
     if not os.path.exists(asrDir):

@@ -1,6 +1,6 @@
-from speechbrain.pretrained.interfaces import EndToEndSLU
 import torchaudio
 import glob
+import os
 import pandas as pd
 from speechbrain.pretrained import EncoderClassifier, SpeakerRecognition
 
@@ -101,7 +101,7 @@ for t1 in target_files:
         t1_id = os.path.basename(t1)
         t2_id = os.path.basename(t2)
 
-        batchsignal1, fs1 = torchaudio.load(t1)
+        signal1, fs1 = torchaudio.load(t1)
         signal2, fs2 = torchaudio.load(t2)
         score, prediction = ecapa_verifier.verify_batch(signal1,signal2)
         print(f'target:{t1_id} \ntest:{t2_id}. \n    score {score}, prediction {prediction}')
@@ -109,3 +109,16 @@ for t1 in target_files:
         results.append((t1_id, t2_id, score, prediction))
 
 results = pd.DataFrame(results)
+
+
+# Torchaudio.load can be used for extracting just required segments of audio from file
+# you need to know the sample rate in advance
+fs = 16000
+frame_offset, num_frames = fs*0.5, fs*1 # extract 0.5-1.5 seconds
+signal1, fs1 = torchaudio.load(t1, frame_offset=frame_offset, num_frames=num_frames)
+signal2, fs2 = torchaudio.load(t2, frame_offset=frame_offset, num_frames=num_frames)
+
+# or you can slice the tensor but this this less efficient
+waveform1, fs = torchaudio.load(t1)
+frame_offset, num_frames = fs*0.5, fs*1 
+waveform1 = waveform1[:, frame_offset:frame_offset+num_frames]
