@@ -1,21 +1,22 @@
 # extract labelled audio of interest from full session listed in csv file
 # this version: comparing codecs so multiple session directories with same label file and equivalnt audio with different codecs
+
 from numpy import exp
-import pydub
 from pydub import AudioSegment
-import sys
 import os
 import re
-import argparse
 import csv
 import pandas as pd
 from rosy_asr_utils import strip_punct
+
 # options for writing audio
 channels = 1
 sample_width = 2
 sample_rate = 48000
 bit_depth = 16
 export_segment_audio = True
+blksecs = 59 # Google has refused some blocks if exactly 60 seconds 
+utt_padding = 0.0 # because utterances are on seconds resolution, some briefer utterances had the same start and end second.
 
 codecs = ['WAV16','WAV48','AAC192k','WEBM32k','WEBM96k','WEBM192k','WEBM256k']
 args_ctl =os.path.join('configs', '4SG.txt')
@@ -54,7 +55,7 @@ for sess_base in sesslist:
         blkmapFile = os.path.join(sesspath,f'{sessname}.blk')
         blkDir= os.path.join(sesspath, 'blocks')
         blockTranscriptDir = os.path.join(sesspath, 'transcripts_blockwise')
-        labelFile = os.path.join(sesspath, f'utt_labels_{sessname}.csv') 
+        labelFile = os.path.join(sesspath, f'utt_labels_blocked_{sessname}.csv') 
         if not os.path.exists(blkDir):
             os.makedirs(blkDir)
         if not os.path.exists(blockTranscriptDir):
@@ -70,9 +71,7 @@ for sess_base in sesslist:
         # make a .blk file based on the ground-truth utterance boundaries from diarized, timestamped transcript
         # each utterance becomes a segment
         # segments are blocked to ~1min blocks for comparability to VAD/ sending to REV
-        blksecs = 59 # Google has refused some blocks if exactly 60 seconds 
-        utt_padding = 0.0 # because utterances are on seconds resolution, some briefer utterances had the same start and end second.
-
+  
         # load session audio
         sess_audio = AudioSegment.from_wav(os.path.join(sesspath, f'{sessname}.wav'))
         # use same defaults as for VAD to block uttern

@@ -217,7 +217,7 @@ def strip_punct(instr):
 def format_sentences(text):
     # function to format text or lists of text (e.g. asr, transcript) for wer computation. 
     # Converts from list to a single string and apply some text normalization operations
-    # note that the norm_transcript function should be applied first to remove REV-specific keywords 
+    # note that the clean_REV_transcript function should be applied first to remove REV-specific keywords 
 
     if isinstance(text,list):
         text = ' '.join(text)
@@ -229,7 +229,7 @@ def format_sentences(text):
     text = ' '.join(text) # convert from list to string of space-delimited words 
     return text
 
-def norm_transcript(docx_fname, txt_fname):
+def clean_REV_transcript(docx_fname, txt_fname):
     doc = docx.Document(docx_fname)
     doctext = [p.text for p in doc.paragraphs]
     # The transcript may be packed into tables
@@ -244,8 +244,8 @@ def norm_transcript(docx_fname, txt_fname):
 
     # strip the various Speaker IDs and crosstalk indicators  off
     doc_stripped = [re.sub('Speaker \d+:','',line) for line in doctext]
-    doc_stripped = [re.sub('\w+:','',line) for line in doc_stripped]
-    doc_stripped = [re.sub(r"\t",'',line) for line in doc_stripped]
+    doc_stripped = [re.sub('.+:','',line) for line in doc_stripped] # remove anything before colon
+    doc_stripped = [re.sub(r"\t",'',line) for line in doc_stripped] # remove tabs
     doc_stripped = [line  for line in doc_stripped if not re.match(r'^\s*$', line)] # remove blank lines
     doc_stripped = [re.sub("[\(\[].*?[\)\]]", " ", line) for line in doc_stripped] # remove sections in brackets or parens
     doc_stripped = [strip_punct(line)  for line in doc_stripped] # remove punct
