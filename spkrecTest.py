@@ -1,14 +1,16 @@
 import torchaudio
+from torch import tensor
 import wave
 import glob
 import os
 import pandas as pd
 from speechbrain.pretrained import EncoderClassifier, SpeakerRecognition
+from speechbrain.utils.metric_stats import EER
 
 speechbrain_dir = "/Users/roso8920/Dropbox (Emotive Computing)/iSAT/speechbrain/"
 
 #####
-verstr = 'spkv_test1_debug'
+verstr = 'spkv_test1'
 precompute_targets=True # set to false for tests of sample-sample pairings
 model_type = 'ecapa' # 'ecapa' or 'xvect'
 #####
@@ -76,4 +78,23 @@ result = test_cfg.apply(df_spkrVerification,
     encoder=encoder, verifier=verifier, target_embeddings=target_embeddings,
     axis = 1)
 
+# evaluate results
+positive_scores = tensor(result.loc[result.match,'score'].to_list())
+negative_scores = tensor(result.loc[~result.match,'score'].to_list())
+result_EER, result_threshold = EER(positive_scores, negative_scores)
 
+print(f'TEST COMPLETE. EER = {result_EER:.3f}, threshold = {result_threshold:.3f}')
+
+result.to_csv(os.path.join('results','speaker_verification','tests', f'{verstr}_{model_type}_result.csv'))
+
+# write summary to txt file
+resfile = os.path.join('results','speaker_verification','tests', f'{verstr}_{model_type}_result.txt')
+
+with open(resfile,'w') as outfile:
+    outfile.write(f'n_pairs = {len(result)}\n')
+    outfile.write(f'n_matches = {len(result[result["match"]])}\n')
+    outfile.write(f'n_target_present = {len(result[~result["x2speaker"].str.match("_UNKNOWN")])}\n')
+    outfile.write(f'n_unique_targetIDs = {len(set(result["x1speaker"]))}\n')
+    outfile.write(f'n_unique_testIDs = {len(set(result["x2speaker"]))}\n')
+    outfile.write(f'EER = {result_EER:.3f}\n')
+    outfile.write(f'EER_threshold = {result_threshold:.3f}\n')

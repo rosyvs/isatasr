@@ -17,8 +17,8 @@ opts['targets_dir'] = 'targets' # subdir of session directory containing enrollm
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrolment and samples only
-opts['density'] = 0.01 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test1_debug'
+opts['density'] = 1.0 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
+opts['verstr'] = 'spkv_test1'
 
 with open(opts['sessions']) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
