@@ -17,8 +17,8 @@ opts['targets_dir'] = 'targets' # subdir of session directory containing enrollm
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrolment and samples only
-opts['density'] = 1.0 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test1'
+opts['density'] = 0.01 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
+opts['verstr'] = 'spkv_test1_debug'
 
 with open(opts['sessions']) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -30,7 +30,7 @@ def get_all_spkr_labels(labels, start_s, end_s):
     matched_utt = (labels['start_sec'] < end_s) & (labels['end_sec'] > start_s)
     sample_labels = labels.loc[matched_utt, 'speaker'].to_list()   
     if not matched_utt:
-        sample_labels = 'NA'
+        sample_labels = '_UNKNOWN'
     return sample_labels
 
 def get_best_spkr_label(labels, start_s, end_s):
@@ -38,7 +38,7 @@ def get_best_spkr_label(labels, start_s, end_s):
     # choose majority label in case of overlap
     overlap_duration = np.maximum(0.0,labels['end_sec'].clip(upper=end_s) - labels['start_sec'].clip(lower=start_s))
     if max(overlap_duration) == 0.0:
-        best_sample_label='NA'
+        best_sample_label='_UNKNOWN'
     else:
         best_sample_label = labels.loc[np.argmax(overlap_duration), 'speaker']
     return best_sample_label
@@ -120,9 +120,10 @@ for sesspath in sesslist:
     
         if opts['sampleVsample']:
             # TODO disallow NA-NA pairings
+            print('TODO')
 
 # prune test list
-if not opts['density'] ==1.0:
+if not (opts['density'] ==1.0):
     test_cfg = random.sample(test_cfg, int(len(test_cfg)*opts['density']))
 
 # pair up cross-sessions
@@ -136,4 +137,4 @@ print(f'Generated speaker verification test config for {opts["verstr"]}')
 print(f'...containing {len(test_cfg)} comparisons')
 print(f'...of which {len(test_cfg_df[test_cfg_df["match"]])} are matched speakers')
 
-test_cfg_df.to_csv(os.path.join('configs','speaker_verification','tests', f'{opts["verstr"]}_config.csv'))
+test_cfg_df.to_csv(os.path.join('configs','speaker_verification','tests', f'{opts["verstr"]}_config.csv'),index=False)
