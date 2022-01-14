@@ -14,10 +14,10 @@ from natsort import natsorted
 
 # loop over sessions in control file and compute WER for any with both ASR and REV transcripts
 
-args_ctl =os.path.join('configs', '4SG.txt')
-verstr = 'VAD_4SG'
+args_ctl =os.path.join('configs', 'deep5.txt')
+verstr = 'deep5_VAD_REV'
 asrDirPattern = 'asr_full'
-transcriptDirPattern = 'transcripts_cher'
+transcriptDirPattern = 'REVtranscripts'
 
 with open(args_ctl) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 

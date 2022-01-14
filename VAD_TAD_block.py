@@ -20,7 +20,7 @@ import io
 #          |--{sessname}_{segment_no}.wav
 
 
-args_ctl =os.path.join('configs', os.path.join('configs', '4SG.txt')) # this is the control file - this is a .txt file containing list of paths to sessions rel to this script
+args_ctl =os.path.join('configs','deep5.txt') # this is the control file - this is a .txt file containing list of paths to sessions rel to this script
 
 # segmentation options
 agg = 1 # aggressiveness of VAD
@@ -28,7 +28,7 @@ frame_msec = 30 # frame length sent to VAD
 win_size = 300 # ms, ring buffer used for VAD 
 min_seg_dur = 2000 # ms. minimum segment duration
 blksecs = 59 # Google ASR has refused some blocks if exactly 60 seconds 
-split_overlap = 1 # for long segments, overlap by this duration in seconds to avoid word splitting
+split_overlap = 1 # for long segments which require cutting, overlap by this duration in seconds to avoid word splitting
 # .wav audio output options:
 channels = 1 # audio channels
 sample_width = 2 # bytes per sample, should usually be 2

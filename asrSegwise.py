@@ -13,14 +13,10 @@ import shutil
 from rosy_asr_utils import *
 
 
-# enter below in terminal: 
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json") 
+asr_srate = 16000 # sampling rate to use for ASR, will resampel the input audio if necessary
 
-# parser = argparse.ArgumentParser(description='run google_recognizer')
-# parser.add_argument('ctl')
-# args = parser.parse_args()
-
-args_ctl =os.path.join('configs', '4SG.txt') # list of session directories to run ASR on
+args_ctl =os.path.join('configs', 'deep5.txt') # list of session directories to run ASR on
 # ctl has list of paths to sessions to process
 with open(args_ctl) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
@@ -33,13 +29,19 @@ for sesspath in sesslist:
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
     asrDir = os.path.join(sesspath,'asr_segwise')
     asrBlockDir = asrDir + '_reblocked' # segment-wise ASR will be concatenated to distinguish from ASR results run on entire block
-    asrFullDir = 'asr_full' # where full session asr will be stored
-    asrFullFile = os.path.join(sesspath,asrFullDir,f"{sessname}.asr") # full session ASR results
-    open(asrFullFile, 'w').close() # clear file before appending
+    asrFullDir = os.path.join(sesspath,'asr_full') # where full session asr will be stored
+    asrFullFile = os.path.join(asrFullDir,f"{sessname}.asr") # full session ASR results
+    if os.path.exists(asrFullFile):
+        open(asrFullFile, 'w').close() # clear file before appending
     blkmapFile = os.path.join(sesspath,f'{sessname}.blk')
 
     audio = AudioSegment.from_file(wavfile)
     srate = audio.frame_rate
+    if not asr_srate == srate:
+        audio = audio.set_frame_rate(asr_srate)
+        srate = asr_srate
+ 
+
 
     # check if asr files already exist, if so, zip them up to make a backup then delete   
     if not os.path.exists(asrDir):

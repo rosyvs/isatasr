@@ -3,7 +3,7 @@ from pathlib import Path
 from pydub import AudioSegment
 import os 
 
-args_ctl =os.path.join('configs', 'toblock_2021-10-04.txt')
+args_ctl =os.path.join('configs', 'deepSample_to_sess.txt')
 # convert session audio to WAV and place in session directories
 
 # options
@@ -11,7 +11,7 @@ channels = 1
 sample_width = 2
 sample_rate = 48000
 bit_depth = 16
-sess_base_dir = './data/sess/' # where to export session subdirectories
+sess_base_dir = './data/deepSampleFull/' # where to export session subdirectories
 
 # args_ctl has list of paths to sessions to process
 with open(args_ctl) as ctl:
@@ -34,6 +34,6 @@ for sess in sesslist:
     wav_path = os.path.join(sesspath,f'{sessname}.wav')
 
     new_audio = aud.set_channels(channels)
-    new_audio = aud.set_frame_rate(sample_rate)
+    new_audio = new_audio.set_frame_rate(sample_rate)
     new_audio.export(wav_path, format='wav')
 

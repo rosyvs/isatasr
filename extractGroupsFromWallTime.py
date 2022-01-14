@@ -16,40 +16,35 @@ sample_width = 2
 sample_rate = 48000
 bit_depth = 16
 
-datadir = './data/deepSampleFull/'
-outdir_stem = './data/deepSample2/'
-extract_timings_csv = './configs/deepSample2_to_extract.csv'
+datadir = './data/sess/'
+outdir_stem = './data/id_labelled/'
+csvfile = './configs/sg_to_extract2.csv'
 
-def HHMMSS_to_sec(time_str):
-    """Get Seconds from time with milliseconds."""
-    if time_str.count(':')==2:
-        h, m, s = time_str.split(':')
-    else:
-        print(f'input string format not supported: {time_str}')
-    return int(h) * 3600 + int(m) * 60 + float(s) 
-
-with open(extract_timings_csv, 'r', newline='') as in_file:
+with open(csvfile, 'r', newline='') as in_file:
     reader = csv.reader(in_file)
     # skip header
     next(reader)
 
     for rec in reader:
         print(rec)
-        sessname,sg_startHMS,sg_endHMS, use = rec
-
-
-    
+        teacher,period,lesson,activity, sessname,excerpt_no, url,date,rec_startHM,sg_startHM,sg_endHM, names_HM,filetype, view, mic_model, mic_no, students, notes = rec
+        h,m = rec_startHM.split(':')
+        rec_start_min = (int(h) * 60) + int(m)
+        h,m = sg_startHM.split(':')
+        sg_start_min = (int(h) * 60) + int(m)
+        h,m = sg_endHM.split(':')
+        sg_end_min = (int(h) * 60) + int(m)
 
         # times in msec rel to start of recording
-        sg_start_ms = HHMMSS_to_sec(sg_startHMS) *1000
-        sg_end_ms = HHMMSS_to_sec(sg_endHMS) *1000
+        sg_start_ms = (sg_start_min - rec_start_min) * 60000
+        sg_end_ms = (sg_end_min - rec_start_min) * 60000
 
 
         sessdir = os.path.join(datadir, sessname)
-        outdir = os.path.join(outdir_stem, f'{sessname}_5min')
+        outdir = os.path.join(outdir_stem, f'{sessname}_ex{excerpt_no}')
         if not os.path.exists(outdir):
             os.makedirs(outdir)
-        outfile = os.path.join(outdir,f'{sessname}_5min.wav')
+        outfile = os.path.join(outdir,f'{sessname}_ex{excerpt_no}.wav')
         sess_audio = AudioSegment.from_wav(os.path.join(sessdir, f'{sessname}.wav'))
         excerpt = sess_audio[sg_start_ms:sg_end_ms]
 

@@ -1,18 +1,21 @@
 import torchaudio
-from torch import tensor
+from torch import tensor, cat, squeeze
 import wave
 import glob
 import os
 import pandas as pd
+import numpy as np
 from speechbrain.pretrained import EncoderClassifier, SpeakerRecognition
 from speechbrain.utils.metric_stats import EER
+# from sklearn.manifold import TSNE
 
 speechbrain_dir = "/Users/roso8920/Dropbox (Emotive Computing)/iSAT/speechbrain/"
 
 #####
-verstr = 'spkv_test1'
+verstr = 'spkv_test2_debug'
 precompute_targets=True # set to false for tests of sample-sample pairings
-model_type = 'ecapa' # 'ecapa' or 'xvect'
+model_type = 'xvect' # 'ecapa' or 'xvect'
+# plot_tsne = True # plot clustering of embeddings color coded by label. < TSNE too slow on laptop
 #####
 
 test_cfg_file = os.path.join('configs','speaker_verification','tests', f'{verstr}_config.csv')
@@ -27,13 +30,13 @@ if model_type == 'ecapa':
 if model_type == 'xvect':
     encoder = EncoderClassifier.from_hparams(source="speechbrain/spkrec-xvect-voxceleb", 
         savedir=f"{speechbrain_dir}/pretrained_models/spkrec-xvect-voxceleb")
-    SpeakerRecognition.from_hparams(source=f"{speechbrain_dir}/pretrained_models/spkrec-xvect-voxcelebTEST", 
+    verifier = SpeakerRecognition.from_hparams(source=f"{speechbrain_dir}/pretrained_models/spkrec-xvect-voxcelebTEST", 
         savedir=f"{speechbrain_dir}/pretrained_models/spkrec-xvect-voxceleb")
 
 
 if precompute_targets:
     # precompute embeddings for enrollment targets (x1) and save in a dict w filepath as key
-    target_files = list(set(test_cfg['x1path'])) 
+    target_files = list(set(test_cfg['x1path']))
     target_embeddings = {}
     for t in target_files:
         signal, fs = torchaudio.load(t)
@@ -78,6 +81,19 @@ result = test_cfg.apply(df_spkrVerification,
     encoder=encoder, verifier=verifier, target_embeddings=target_embeddings,
     axis = 1)
 
+# if plot_tsne:
+#     labels_targ = [s + '_ENROLLMENT' for s in result['x1speaker']]
+#     xv_targ = squeeze(cat(result['xv1'].to_list())).numpy()
+
+#     labels_sample = result['x2speaker'].to_list()
+#     xv_sample = squeeze(cat(result['xv2'].to_list())).numpy()   
+
+#     labels_all = labels_targ + labels_sample
+#     xv_all = np.concatenate((xv_targ, xv_sample),axis=0)
+
+#     tsneer = TSNE(2, n_iter=250)
+#     tsne_result = tsneer.fit_transform(xv_all)
+
 # evaluate results
 positive_scores = tensor(result.loc[result.match,'score'].to_list())
 negative_scores = tensor(result.loc[~result.match,'score'].to_list())
@@ -98,3 +114,6 @@ with open(resfile,'w') as outfile:
     outfile.write(f'n_unique_testIDs = {len(set(result["x2speaker"]))}\n')
     outfile.write(f'EER = {result_EER:.3f}\n')
     outfile.write(f'EER_threshold = {result_threshold:.3f}\n')
+
+
+

@@ -17,8 +17,8 @@ opts['targets_dir'] = 'targets' # subdir of session directory containing enrollm
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrolment and samples only
-opts['density'] = 1.0 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test1'
+opts['density'] = 0.1 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
+opts['verstr'] = 'spkv_test2_debug' # will save the configuration with this filename
 
 with open(opts['sessions']) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -53,6 +53,14 @@ def labels_to_samples(labels, audio_dur, frame_dur_s, frame_shift_s):
         samples.append((s, s+frame_dur_s, sample_label))
     return samples
 
+def get_overlap(start1, end1, start2, end2):
+    # start1, end1, start2, end2 are each floats
+    # returns size of overlap
+    # TODO some oddities due to FP precision 
+
+    overlap_duration = max(0.0, min(end1,end2) - max(start1,start2))
+    return overlap_duration
+
 test_cfg = [] # for storing list of test comparisons and timestamps
 enrollment_list_all=[]
 sample_list_all=[]
@@ -72,7 +80,7 @@ for sesspath in sesslist:
 
     ## get list of samples
     sample_list = labels_to_samples(labels, session_duration,opts['frame_dur_s'], opts['frame_shift_s'])
-    # add filename column TODO
+    # add filename column 
     sample_list = [(wavfile,) + elms for elms in sample_list]
     ## get enrollment
     enrollment_list = []
@@ -94,6 +102,11 @@ for sesspath in sesslist:
             enrFile = os.path.join(sesspath,opts['targets_dir'],f'enrollment_simulated_{t}.wav')        
             enrAudio.export(enrFile ,format='wav')
             enrollment_list.append((enrFile, 0.0, enrol_dur,t))
+
+            # # remove the audio used for enrollment from the sample list - TODO this is not quite right, gives EER of 0
+            # keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrol_dur)>0.0) for elm in sample_list]
+            # sample_list = [sample_list[i] for i in keep_ix if i]
+
     else: # read enrollment from targets_dir
         found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,opts['targets_dir'])) if f.endswith('.wav')]
         for f in found_enrFiles:
@@ -113,14 +126,22 @@ for sesspath in sesslist:
     
     ## pair up within-session 
     if not opts['cross_session']:
+
+        if opts['sampleVsample']:
+            # pair all samples/enrolments with one another (gives more tests)
+            for s1 in (enrollment_list+sample_list):
+                for s2 in (enrollment_list+sample_list):
+                    if not ((s1[3]=='_UNKNOWN') & (s2[3]=='_UNKNOWN')):
+                        if not (s1==s2): # don't pair identical samples 
+                            if not (s1[0] == s2[0]) & (get_overlap(s1[1], s1[2], s2[1], s2[2]) > 0.0): # don't pair overlapping samples
+                                test_cfg.append(s1+s2)
+
+
         if not opts['sampleVsample']:
+            # just pair enrollments with samples (as in TAD)
             for e in enrollment_list:
                 for s in sample_list: 
                     test_cfg.append(e+s)
-    
-        if opts['sampleVsample']:
-            # TODO disallow NA-NA pairings
-            print('TODO')
 
 # prune test list
 if not (opts['density'] ==1.0):
