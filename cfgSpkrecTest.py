@@ -103,9 +103,9 @@ for sesspath in sesslist:
             enrAudio.export(enrFile ,format='wav')
             enrollment_list.append((enrFile, 0.0, enrol_dur,t))
 
-            # # remove the audio used for enrollment from the sample list - TODO this is not quite right, gives EER of 0
-            # keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrol_dur)>0.0) for elm in sample_list]
-            # sample_list = [sample_list[i] for i in keep_ix if i]
+            # remove the audio used for enrollment from the sample list
+            keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrol_dur)>0.0) for elm in sample_list]
+            sample_list = [sample_list[i] for i in range(0,len(keep_ix)) if keep_ix[i]]
 
     else: # read enrollment from targets_dir
         found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,opts['targets_dir'])) if f.endswith('.wav')]

@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 video_path_in = './data/fall2021_unsorted/crystalVideoQ2/'
-extract_timings_csv = './configs/deepSample2_to_extract.csv'
+extract_timings_csv = './configs/deepSample2a_to_extract.csv'
 outdir= './data/fall2021_unsorted/crystalVideoQ2/deepSample2_video/'
 
 def HHMMSS_to_sec(time_str):
@@ -39,10 +39,23 @@ with open(extract_timings_csv, 'r', newline='') as in_file:
 
         for sess_video_file in glob.glob(f'{video_path_in}/{sessname}.*'):
             ext = Path(sess_video_file).suffix
+
+            # .MOV is causing compatability issues for annotators on Windows - convert to mp4
+            ext = '.mp4'
             outfile = os.path.join(outdir,f'{sessname}_5min{ext}')
         
-            subprocess.call(f'ffmpeg -i {sess_video_file} -ss {sg_startHMS}  -to {sg_endHMS} -c copy {outfile}', shell=True)
-
+            subprocess.call(['ffmpeg',
+            '-y',
+            '-i',
+            sess_video_file,
+            '-ss',
+            sg_startHMS,
+            '-to',
+            sg_endHMS,
+            '-c',
+            'copy',
+            outfile        
+            ],shell=False)
 
 
 
