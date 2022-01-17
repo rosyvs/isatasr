@@ -14,7 +14,7 @@ speechbrain_dir = "/Users/roso8920/Dropbox (Emotive Computing)/iSAT/speechbrain/
 #####
 verstr = 'spkv_test2_debug'
 precompute_targets=True # set to false for tests of sample-sample pairings
-model_type = 'xvect' # 'ecapa' or 'xvect'
+model_type = 'ecapa' # 'ecapa' or 'xvect'
 # plot_tsne = True # plot clustering of embeddings color coded by label. < TSNE too slow on laptop
 #####
 

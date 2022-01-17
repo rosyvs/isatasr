@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import random
+import itertools
 from pydub.audio_segment import AudioSegment, effects
 
 # generates configuration files for speaker verification tests, given a label file for each session
@@ -13,12 +14,13 @@ opts['frame_dur_s'] = 1.5
 opts['frame_shift_s'] = 0.5
 opts['sessions'] = os.path.join('configs', '4SG.txt') # path to session list 
 opts['simulate_enrollment'] = True # simulate enrollment by extracting first utterances to use as target
+opts['target_combinations'] = True # make additional enrolment samples by combining existing samples
 opts['targets_dir'] = 'targets' # subdir of session directory containing enrollment audio (will create if simulating)
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrolment and samples only
 opts['density'] = 0.1 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test2_debug' # will save the configuration with this filename
+opts['verstr'] = 'spkv_test3_debug' # will save the configuration with this filename
 
 with open(opts['sessions']) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -86,29 +88,32 @@ for sesspath in sesslist:
     enrollment_list = []
 
     if opts['simulate_enrollment']:
+        print('simulating enrollment from labelled utterances...')
         if not os.path.exists(os.path.join(sesspath, opts['targets_dir'])):
             os.makedirs(os.path.join(sesspath, opts['targets_dir']))
         # list speaker IDs
         speakers = list(set(labels['speaker']))
-        enrol_dur = 10.0 # will concatenate first 10s of utterances from this target
+        enrDur = 10.0 # will concatenate first 10s of utterances from this target
         for t in speakers:
             labels_this_spkr = labels[labels['speaker'].str.match(t)]
             enrAudio = AudioSegment.empty() 
             starts_ms  = labels_this_spkr['start_sec'].to_list()*1000
             ends_ms = labels_this_spkr['end_sec'].to_list()*1000
-            while enrAudio.duration_seconds <enrol_dur:
+            while enrAudio.duration_seconds <enrDur:
                 enrAudio += audio[starts_ms.pop(0)*1000 : ends_ms.pop(0)*1000]
-            enrAudio = enrAudio[0:1000*enrol_dur]    
+            enrAudio = enrAudio[0:1000*enrDur]    
             enrFile = os.path.join(sesspath,opts['targets_dir'],f'enrollment_simulated_{t}.wav')        
             enrAudio.export(enrFile ,format='wav')
-            enrollment_list.append((enrFile, 0.0, enrol_dur,t))
+            enrollment_list.append((enrFile, 0.0, enrDur,t))
 
             # remove the audio used for enrollment from the sample list
-            keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrol_dur)>0.0) for elm in sample_list]
+            keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrDur)>0.0) for elm in sample_list]
             sample_list = [sample_list[i] for i in range(0,len(keep_ix)) if keep_ix[i]]
 
     else: # read enrollment from targets_dir
         found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,opts['targets_dir'])) if f.endswith('.wav')]
+        print(f'found {len(found_enrFiles)} enrollment audio files...')
+
         for f in found_enrFiles:
             enrFile = os.path.join(sesspath,opts['targets_dir'], f)
             enrAudio = AudioSegment.from_file(enrFile)
@@ -118,7 +123,24 @@ for sesspath in sesslist:
             speaker = re.sub('enrollment_simulated_','',speaker)
             speaker = re.sub('enrollment_','',speaker)
 
-            enrollment_list.append((enrFile, 0.0, enrol_dur,speaker))
+            enrollment_list.append((enrFile, 0.0, enrDur,speaker))
+
+    if opts['target_combinations']: # generate pairings of targets and sum enrollment audio
+        if not os.path.exists(os.path.join(sesspath, opts['targets_dir'], 'combinations')):
+            os.makedirs(os.path.join(sesspath, opts['targets_dir'], 'combinations'))
+        found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,opts['targets_dir'])) if f.endswith('.wav')]
+        print('generating combination enrollment audio...')
+        for f1, f2 in  [(f1, f2) for f1 in enrollment_list for f2 in enrollment_list if f1 != f2]:
+            enrAudio1 = AudioSegment.from_file( f1[0])
+            enrAudio2 = AudioSegment.from_file( f2[0])
+            enrDur = min(enrAudio1.duration_seconds, enrAudio2.duration_seconds)
+            enrAudioCombined = effects.normalize(effects.normalize(enrAudio1[0:enrDur*1000]).overlay(effects.normalize(enrAudio2[0:enrDur*1000])))
+            speaker = f'{f1[3]}_ADD_{f2[3]}'
+
+            enrFile = os.path.join(sesspath,opts['targets_dir'],'combinations', f'{speaker}.wav')        
+            enrAudioCombined.export(enrFile ,format='wav')
+
+            enrollment_list.append((enrFile, 0.0, enrDur,speaker))
 
     # append to all-session list        
     enrollment_list_all+=enrollment_list
