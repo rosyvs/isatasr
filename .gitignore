@@ -15,4 +15,7 @@ __pycache__/
 *.csv
 
 *.json
-
+*.wav
+*.mp4
+*.MOV
+*.webm

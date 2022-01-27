@@ -3,6 +3,7 @@ import os
 import re
 from rosy_asr_utils import *
 
+
 # Process REV transcript .docx files: reduce and save in correct session directories
 transcriptDocxDir = os.path.expanduser(os.path.normpath(
     '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted/Crystal-deepSample/')) # input
@@ -12,6 +13,7 @@ sessDir = os.path.normpath(os.path.expanduser(
 # Sometimes the transcripts were done for 1-minute blocks, other times for the whole session.
 # Parsing the REV transcript filename is different in each case, so make sure to set the following flag correctly
 blocked = False
+deidentify = True # attempts to redact names from the transcript
 
 
 # loop over files and convert

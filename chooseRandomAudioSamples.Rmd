@@ -12,7 +12,7 @@ ipak <- function(pkg){
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
-packages <- c('sjPlot', 'reshape2', 'magrittr', 'data.table', 'gridExtra', 'ggplot2','stringr','readxl','gridExtra','ggpubr','tidyverse', 'dplyr','tidyr','strex','tibble','chron','lubridate','anytime','hms')
+packages <- c('sjPlot', 'reshape2', 'magrittr', 'data.table', 'gridExtra', 'ggplot2','stringr','readxl','tidyverse', 'dplyr','tidyr','strex','tibble','chron','lubridate','anytime','hms','stringr')
 ipak(packages)
 
 ```
@@ -119,7 +119,25 @@ print(stats.wide.SGduration.sd)
 
 ```
 
-FOCUSSED SAMPLE
+FOCUSSED SAMPLE v1
+Crystal Q2 video
+```{r}
+dtypes = c('text', 'text', 'text', 'text', 'text', 'text', 'text',  'text','date','guess','guess','guess', 'guess','text','text','guess','guess','text','text')
+
+df <- read_xlsx('../Data File Catalog_2022-01-26.xlsx', sheet = 'Sample 1 - Crystal Focused', na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
+names(df) <- names(df) %>% make.names() 
+
+df <- df%>% filter(!grepl('missing REV transcript|consent issue', Sample.Comments))
+
+df <- df %>% mutate_at(c( 'Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as_hms)
+
+all_students = paste(df %>% select(Student.in.Group)%>% unlist(use.names = FALSE), collapse='\n') %>% strsplit(split='\n')
+all_students = all_students[1] %>% unlist() %>% unique() 
+n_students = length(all_students)
+
+```
+
+FOCUSSED SAMPLE v2
 Crystal Q2 video
 ```{r}
 #dtypes = c('list', 'text', 'text', 'text', 'text', 'text', 'text',  'text','date','guess','guess','guess', 'guess','text','text','guess','guess','logical','text')
@@ -142,13 +160,9 @@ df$Small.Group.Duration <- df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small
 # df$Issues..0.No..1.Yes.[is.na(df$Issues..0.No..1.Yes.)] <- FALSE # if not true, assume false
 # df <- df %>% filter(Issues..0.No..1.Yes. == F)
 
-```
-
-
-```{r}
 sample_this <- df # generate samples for all rows
 
-# randomly generate sample start times for each row
+# randomly generate sample start times for each row, no resrtrictions
 for (s in 1:nrow(sample_this)){
   thisrow <- sample_this[s,]
   sample_this$sample_start[s] <- hms(round(runif(1, as.duration(thisrow$Timestamp.of.Small.Group.Start), as.duration(thisrow$Timestamp.of.Small.Group.End-opts.Duration))))
@@ -160,7 +174,7 @@ sample_this$sample_end <- as_hms(sample_this$sample_end)
 
 sample_this <- sample_this %>%  mutate(Student.in.Group = gsub("\n", ", ", Student.in.Group))
 
-sample_this %>% write.csv('samples_focused_2021-12-14.csv')
+sample_this %>% write.csv('samples_focused_2021-01-26.csv')
 
 stats.focused.SGduration.total = dseconds(sum(as.numeric(df$Small.Group.Duration),na.rm=T))
 stats.focused.SGduration.mean = dseconds(mean(as.numeric(df$Small.Group.Duration),na.rm=T))
@@ -173,7 +187,7 @@ print(stats.focused.SGduration.sd)
 
 
 
-# Generate 5*1-minute samples for Crystal's video, in center of small-group range.
+# Generate samples for Crystal's video, in center of small-group range, excluding enrollment
 In center of range:
 - Find exact midpoint of small-group 
 - Choose a range of 5 minutes which includes this midpoint but does not hang over the ends of the recording
@@ -190,6 +204,8 @@ opts.nChunk = opts.Duration/opts.ChunkBy
 opts.repeats = 5
 # randomly generate sample start times for each row
 for (k in 1:opts.repeats){
+  sample <- list()
+
 for (s in 1:nrow(df)){
   thisrow <- df[s,]
   
@@ -254,6 +270,6 @@ for (s in 1:nrow(df)){
   
   
 }
-sample <- bind_rows(sample)%>% write.csv(paste0('../annotation/samples_focussed_5inCenter_2022-01-05_', k, '.csv'))
+sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% write.csv(paste0('../annotation/samples_focussed_5inCenter_2022-01-26_', k, '.csv'))
 }
 ```

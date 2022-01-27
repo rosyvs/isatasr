@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 video_path_in = './data/fall2021_unsorted/crystalVideoQ2/'
-extract_timings_csv = './configs/deepSample2a_to_extract.csv'
+extract_timings_csv = './configs/deepSample2b_to_extract.csv'
 outdir= './data/fall2021_unsorted/crystalVideoQ2/deepSample2_video/'
 
 def HHMMSS_to_sec(time_str):

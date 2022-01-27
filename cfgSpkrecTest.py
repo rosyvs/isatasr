@@ -14,13 +14,14 @@ opts['frame_dur_s'] = 1.5
 opts['frame_shift_s'] = 0.5
 opts['sessions'] = os.path.join('configs', '4SG.txt') # path to session list 
 opts['simulate_enrollment'] = True # simulate enrollment by extracting first utterances to use as target
-opts['target_combinations'] = True # make additional enrolment samples by combining existing samples
+opts['target_combinations'] = True # make additional enrollment samples by combining existing samples
 opts['targets_dir'] = 'targets' # subdir of session directory containing enrollment audio (will create if simulating)
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
-opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrolment and samples only
+opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrollment and samples only
 opts['density'] = 0.1 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test3_debug' # will save the configuration with this filename
+opts['verstr'] = 'spkv_test4_debug' # will save the configuration with this filename
+opts['label_type'] = 'multi' # 'multi' allows the label (for an enrollment or sample) to be a list of speaker IDs. 'best' chooses majority speaker
 
 with open(opts['sessions']) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -30,9 +31,9 @@ def get_all_spkr_labels(labels, start_s, end_s):
     # pull speaker label for a defined audio interval
     # allowing for multiple labels per interval
     matched_utt = (labels['start_sec'] < end_s) & (labels['end_sec'] > start_s)
-    sample_labels = labels.loc[matched_utt, 'speaker'].to_list()   
-    if not matched_utt:
-        sample_labels = '_UNKNOWN'
+    sample_labels = labels.loc[matched_utt, 'speaker'].to_list()
+    if not any(matched_utt):
+        sample_labels = ['_UNKNOWN']
     return sample_labels
 
 def get_best_spkr_label(labels, start_s, end_s):
@@ -45,13 +46,17 @@ def get_best_spkr_label(labels, start_s, end_s):
         best_sample_label = labels.loc[np.argmax(overlap_duration), 'speaker']
     return best_sample_label
 
-def labels_to_samples(labels, audio_dur, frame_dur_s, frame_shift_s):
+def labels_to_samples(labels, audio_dur, frame_dur_s, frame_shift_s, label_type = 'best'):
     # generate samples from speaker-labelled audio with corresponding speaker labels
     # unlabelled audio (could be speech, silence or background) to be labelled as 'Null'
     samples = []
     samp_start = np.arange(0,audio_dur-frame_dur_s,frame_shift_s)
     for s in samp_start:
-        sample_label = get_best_spkr_label(labels, s, s+frame_dur_s)
+        if label_type == 'best':
+            sample_label = get_best_spkr_label(labels, s, s+frame_dur_s)
+        if label_type == 'multi':
+            sample_label = get_all_spkr_labels(labels, s, s+frame_dur_s)
+
         samples.append((s, s+frame_dur_s, sample_label))
     return samples
 
@@ -62,6 +67,14 @@ def get_overlap(start1, end1, start2, end2):
 
     overlap_duration = max(0.0, min(end1,end2) - max(start1,start2))
     return overlap_duration
+
+def any_label_match(labels_1, labels_2):
+    # check if any labels in list/tuple labels_1 matches any labels in list/tuple labels_2
+    # return True if so
+    print(f'labels_1:{labels_1}')
+    print(f'labels_1:{labels_1}')
+
+    return any(set(labels_1).intersection(set(labels_2)))
 
 test_cfg = [] # for storing list of test comparisons and timestamps
 enrollment_list_all=[]
@@ -81,7 +94,7 @@ for sesspath in sesslist:
     session_duration = audio.duration_seconds
 
     ## get list of samples
-    sample_list = labels_to_samples(labels, session_duration,opts['frame_dur_s'], opts['frame_shift_s'])
+    sample_list = labels_to_samples(labels, session_duration,opts['frame_dur_s'], opts['frame_shift_s'], opts['label_type'])
     # add filename column 
     sample_list = [(wavfile,) + elms for elms in sample_list]
     ## get enrollment
@@ -135,7 +148,8 @@ for sesspath in sesslist:
             enrAudio2 = AudioSegment.from_file( f2[0])
             enrDur = min(enrAudio1.duration_seconds, enrAudio2.duration_seconds)
             enrAudioCombined = effects.normalize(effects.normalize(enrAudio1[0:enrDur*1000]).overlay(effects.normalize(enrAudio2[0:enrDur*1000])))
-            speaker = f'{f1[3]}_ADD_{f2[3]}'
+            #speaker = f'{f1[3]}_ADD_{f2[3]}'
+            speaker = [f1[3],f2[3]] # speaker is a list
 
             enrFile = os.path.join(sesspath,opts['targets_dir'],'combinations', f'{speaker}.wav')        
             enrAudioCombined.export(enrFile ,format='wav')
@@ -174,7 +188,14 @@ if not (opts['density'] ==1.0):
 
 ## write out test configuration
 test_cfg_df = pd.DataFrame(test_cfg, columns=['x1path','x1start_s','x1end_s','x1speaker','x2path','x2start_s','x2end_s','x2speaker'])
-test_cfg_df['match'] = test_cfg_df['x1speaker']==test_cfg_df['x2speaker']
+
+# which pairings match? 
+if opts['label_type'] == 'multi' :
+    #test_cfg_df['match'] = test_cfg_df.apply(lambda x: any_label_match(test_cfg_df['x1speaker'], test_cfg_df['x2speaker']) , axis=1)
+    test_cfg_df['match'] = [any_label_match(*args) for args in tuple(zip(test_cfg_df['x1speaker'], test_cfg_df['x2speaker'])) ]
+
+elif opts['label_type'] == 'best':
+    test_cfg_df['match'] = test_cfg_df['x1speaker']==test_cfg_df['x2speaker']
 
 print(f'Generated speaker verification test config for {opts["verstr"]}')
 print(f'...containing {len(test_cfg)} comparisons')
