@@ -56,7 +56,7 @@ for sesspath in sesslist:
             asr = ''
         else: 
             asr = open(asrFile,'r').read()
-            asr = format_sentences(asr)
+            asr = format_text_for_wer(asr)
         asr_fullsess.append(asr)
 
     if not os.path.exists(transcriptDir):
@@ -75,7 +75,7 @@ for sesspath in sesslist:
             transcript = ''
         else:
             transcript = open(transcriptFile,'r').read()
-            transcript = format_sentences(transcript) 
+            transcript = format_text_for_wer(transcript) 
         transcript_fullsess.append(transcript)
     # concatenate blocks
     transcript_fullsess = ' '.join(transcript_fullsess)

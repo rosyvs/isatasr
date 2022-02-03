@@ -44,7 +44,7 @@ for sesspath in sesslist:
             transcript = ''
         else:
             transcript = open(transcriptFile,'r').read()
-            transcript = format_sentences(transcript) 
+            transcript = format_text_for_wer(transcript) 
         transcript_fullsess.append(transcript)
     # concatenate blocks
     transcript_fullsess = ' '.join(transcript_fullsess)

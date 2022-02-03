@@ -44,7 +44,7 @@ for sesspath in sesslist:
             asr = ''
         else: 
             asr = open(asrFile,'r').read()
-            asr = format_sentences(asr)
+            asr = format_text_for_wer(asr)
         asr_fullsess.append(asr)
 
         # append all ASR results to a single file

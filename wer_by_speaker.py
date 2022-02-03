@@ -69,7 +69,7 @@ for sesspath in sesslist:
             print(f'--no ASR for segment {s}')
         else: 
             asr = open(asrFile,'r').read()
-            asr = format_sentences(asr)
+            asr = format_text_for_wer(asr)
             asr_exists = True
             asr_wordcount = len(asr.split())
 
@@ -84,7 +84,7 @@ for sesspath in sesslist:
 
         else:
             transcript = open(transcriptFile,'r').read()
-            transcript = format_sentences(transcript) 
+            transcript = format_text_for_wer(transcript) 
             transcript_exists = True
             transcript_wordcount = len(transcript.split())
 
