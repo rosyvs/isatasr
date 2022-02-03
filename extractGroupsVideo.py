@@ -31,31 +31,37 @@ with open(extract_timings_csv, 'r', newline='') as in_file:
     next(reader)
 
     for rec in reader:
-        print(rec)
         sessname,sg_startHMS,sg_endHMS, use = rec
 
         sg_start_ms = HHMMSS_to_sec(sg_startHMS) *1000
         sg_end_ms = HHMMSS_to_sec(sg_endHMS) *1000
 
-        for sess_video_file in glob.glob(f'{video_path_in}/{sessname}.*'):
-            ext = Path(sess_video_file).suffix
+        videos = glob.glob(f'{video_path_in}/{sessname}.*')
+        print(videos)
+        if not videos:
+            print(f'{sessname}: no video found')
+        else:
+            for sess_video_file in videos:
+                ext = Path(sess_video_file).suffix
 
-            # .MOV is causing compatability issues for annotators on Windows - convert to mp4
-            ext = '.mp4'
-            outfile = os.path.join(outdir,f'{sessname}_5min{ext}')
-        
-            subprocess.call(['ffmpeg',
-            '-y',
-            '-i',
-            sess_video_file,
-            '-ss',
-            sg_startHMS,
-            '-to',
-            sg_endHMS,
-            '-c',
-            'copy',
-            outfile        
-            ],shell=False)
+                # .MOV is causing compatability issues for annotators on Windows - convert to mp4
+                #ext = '.mp4'
+                outfile = os.path.join(outdir,f'{sessname}_5min{ext}')
+
+                if os.path.exists(sess_video_file):
+            
+                    subprocess.call(['ffmpeg',
+                    '-y',
+                    '-i',
+                    sess_video_file,
+                    '-ss',
+                    sg_startHMS,
+                    '-to',
+                    sg_endHMS,
+                    '-c',
+                    'copy',
+                    outfile        
+                    ],shell=False)
 
 
 

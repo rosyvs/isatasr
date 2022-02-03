@@ -3,7 +3,7 @@ from pathlib import Path
 from pydub import AudioSegment
 import os 
 
-args_ctl =os.path.join('configs', 'deepSample_to_sess.txt')
+args_ctl =os.path.join('configs', 'deepSample2_to_sess.txt')
 # convert session audio to WAV and place in session directories
 
 # options
@@ -11,7 +11,7 @@ channels = 1
 sample_width = 2
 sample_rate = 48000
 bit_depth = 16
-sess_base_dir = './data/deepSampleFull/' # where to export session subdirectories
+sess_base_dir = './data/deepSample2/' # where to export session subdirectories
 
 # args_ctl has list of paths to sessions to process
 with open(args_ctl) as ctl:

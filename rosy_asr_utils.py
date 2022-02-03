@@ -7,11 +7,7 @@ import numpy as np
 import collections
 import contextlib
 import re
-import sys
 import wave
-import webrtcvad # Parts of this pipeline based on py-webrtcvad The MIT License (MIT) Copyright (c) 2016 John Wiseman
-import os
-import argparse
 from pydub import AudioSegment
 from google.cloud import speech
 
@@ -204,29 +200,33 @@ def strip_punct(instr):
         if m != None:
             word = word.replace(',', '')
 
-        # strip punctuation- replace punctuation with space
-        pstr = '.?!,:;()"'
-        trantab = str.maketrans('','',pstr)
-        word = word.translate(trantab)
+        # commas inside words become space
+        word = re.sub(",", " ", word)
+
         word = word.strip()
 
         newstr += ' ' + word
     newstr = newstr.strip()
     return newstr
 
-def format_sentences(text):
+def remove_in_brackets(text):
+    # removes any clause in brackets or parens, and the brackets themselves
+    return re.sub("[\(\[].*?[\)\]]+", " ", text)
+
+
+def format_text_for_wer(text):
     # function to format text or lists of text (e.g. asr, transcript) for wer computation. 
     # Converts from list to a single string and apply some text normalization operations
     # note that the clean_REV_transcript function should be applied first to remove REV-specific keywords 
+    # and extract text from docx format tables
 
     if isinstance(text,list):
         text = ' '.join(text)
     text = text.replace('\n',' ') # replace newline with space
-    text = re.sub('\s+',' ',text) # replace multiple space with single
     text = strip_punct(text)
     text = text.lower()
-    text = [word.strip(string.punctuation) for word in text.split()]# remove punc except within words
-    text = ' '.join(text) # convert from list to string of space-delimited words 
+    text = remove_in_brackets(text) # removes non-spoken annotations such as [inaudible]
+    text = re.sub('\s+',' ',text) # replace multiple space with single
     return text
 
 def clean_REV_transcript(docx_fname, txt_fname):
@@ -244,14 +244,22 @@ def clean_REV_transcript(docx_fname, txt_fname):
 
     # strip the various Speaker IDs and crosstalk indicators  off
     doc_stripped = [re.sub('Speaker \d+:','',line) for line in doctext]
-    doc_stripped = [re.sub('.+:','',line) for line in doc_stripped] # remove anything before colon
+    doc_stripped = [re.sub('.+:','',line) for line in doc_stripped] # remove anything before colon - this is speaker ID
     doc_stripped = [re.sub(r"\t",'',line) for line in doc_stripped] # remove tabs
     doc_stripped = [line  for line in doc_stripped if not re.match(r'^\s*$', line)] # remove blank lines
-    doc_stripped = [re.sub("[\(\[].*?[\)\]]", " ", line) for line in doc_stripped] # remove sections in brackets or parens
+    doc_stripped = [remove_in_brackets(line) for line in doc_stripped] # remove sections in brackets or parens
     doc_stripped = [strip_punct(line)  for line in doc_stripped] # remove punct
     # write stripped transcript to txt
     with open(txt_fname,'w') as outfile:
         outfile.write('\n'.join(doc_stripped))
+
+def HHMMSS_to_sec(time_str):
+    """Get Seconds from time with milliseconds."""
+    if time_str.count(':')==2:
+        h, m, s = time_str.split(':')
+    else:
+        print(f'input string format not supported: {time_str}')
+    return int(h) * 3600 + int(m) * 60 + float(s) 
 
 
 def align_words(ref,hyp):

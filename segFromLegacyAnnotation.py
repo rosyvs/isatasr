@@ -3,6 +3,8 @@
 # each utterance becomes a segment
 # segments are blocked to ~1min blocks for comparability to VAD/ sending to REV
 
+# this only works for specific transcripts that were doe manually in a sreadsheet with quirky timestamp format, affects 4 smallgroup files from fall 2021
+
 from numpy import exp
 from pydub import AudioSegment
 import os
@@ -20,8 +22,8 @@ export_segment_audio = True
 blksecs = 59 # Google has refused some blocks if exactly 60 seconds 
 utt_padding = 0.0 # because utterances are on seconds resolution, some briefer utterances had the same start and end second - pad if so
 
-annotation_dir = './data/transcripts_unsorted/Crystal-deepSample/ELAN/' # where to find manual annotation csv files
-args_ctl =os.path.join('configs', 'deep1ELAN.txt') # list of session directories to run ASR on
+annotation_dir = './data/id_labelled/cher_transcripts' # where to find manual annotation csv files
+args_ctl =os.path.join('configs', '4SG.txt') # list of session directories to run ASR on
 
 def HHMMSS_to_sec(time_str):
     """Get Seconds from time with milliseconds."""
@@ -44,10 +46,10 @@ for sesspath in sesslist:
     print(f'sesspath: {sesspath}')
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
-    csvfile = os.path.join(annotation_dir, f'transcript-diarized-timestamped_{sessname}.txt') # read labels from here
+    csvfile = os.path.join(annotation_dir, f'{sessname}_diarized.csv') # read labels from here
     blkmapFile = os.path.join(sesspath, f'{sessname}.blk')
     blkDir= os.path.join(sesspath,'blocks')
-    blockTranscriptDir = os.path.join(sesspath,'ELANtranscripts_blockwise')
+    blockTranscriptDir = os.path.join(sesspath,'transcripts_blockwise')
     labelFile = os.path.join(sesspath,f'utt_labels_{sessname}.csv') # will be created
     
     if not os.path.exists(blkDir):
@@ -58,7 +60,7 @@ for sesspath in sesslist:
         segDir = os.path.join(sesspath,'segments')
         if not os.path.exists(segDir):
             os.makedirs(segDir)
-        segTranscriptDir = os.path.join(sesspath,'ELANtranscripts_segwise')
+        segTranscriptDir = os.path.join(sesspath,'transcripts_segwise')
         if not os.path.exists(segTranscriptDir):
                 os.makedirs(segTranscriptDir)
 
@@ -66,12 +68,10 @@ for sesspath in sesslist:
     sess_audio = AudioSegment.from_wav(os.path.join(sesspath, f'{sessname}.wav'))
     # use same defaults as for VAD to block uttern
 
-    with open(csvfile) as in_file:
-        reader = csv.reader(in_file, delimiter="\t")
-        # # skip header
+    with open(csvfile, 'r', newline='') as in_file:
+        reader = csv.reader(in_file)
+        # skip header
         next(reader)
-
-
         curlen = 0.0
         blk = []
         b=0
@@ -84,9 +84,9 @@ for sesspath in sesslist:
 
         for utt in reader:
             if not ''.join(utt).strip():
-               continue
+                continue
             print(utt)
-            speaker,_,start_HHMMSS, end_HHMMSS, dur_HHMMSS, utterance = utt
+            start_HHMMSS,speaker,utterance,end_HHMMSS = utt
             # clean up speaker and utterance for ASR
             speaker = re.sub(' ','',speaker)
             speaker = re.sub(':','',speaker)

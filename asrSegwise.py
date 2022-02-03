@@ -16,7 +16,7 @@ from rosy_asr_utils import *
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json") 
 asr_srate = 16000 # sampling rate to use for ASR, will resampel the input audio if necessary
 
-args_ctl =os.path.join('configs', 'deep5.txt') # list of session directories to run ASR on
+args_ctl =os.path.join('configs', 'deepSample2.txt') # list of session directories to run ASR on
 # ctl has list of paths to sessions to process
 with open(args_ctl) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
@@ -28,7 +28,7 @@ for sesspath in sesslist:
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
     asrDir = os.path.join(sesspath,'asr_segwise')
-    asrBlockDir = asrDir + '_reblocked' # segment-wise ASR will be concatenated to distinguish from ASR results run on entire block
+    # asrBlockDir = asrDir + '_reblocked' # segment-wise ASR will be concatenated to distinguish from ASR results run on entire block
     asrFullDir = os.path.join(sesspath,'asr_full') # where full session asr will be stored
     asrFullFile = os.path.join(asrFullDir,f"{sessname}.asr") # full session ASR results
     if os.path.exists(asrFullFile):
@@ -46,8 +46,8 @@ for sesspath in sesslist:
     # check if asr files already exist, if so, zip them up to make a backup then delete   
     if not os.path.exists(asrDir):
         os.makedirs(asrDir)
-    if not os.path.exists(asrBlockDir):
-        os.makedirs(asrBlockDir)
+    # if not os.path.exists(asrBlockDir):
+    #     os.makedirs(asrBlockDir)
     if not os.path.exists(asrFullDir):
         os.makedirs(asrFullDir)
     # check if asr file already existed, and backup if so
@@ -87,10 +87,10 @@ for sesspath in sesslist:
         with open(asrfile,'w') as outfile:
             outfile.write(res + '\n')
 
-        # append segment ASRresults to the corresponding block
-        asrblockfile = os.path.join(asrBlockDir, f"{sessname}_{b}.asr")
-        with open(asrblockfile,'a') as outfile:
-            outfile.write(res + '\n')
+        # # append segment ASRresults to the corresponding block
+        # asrblockfile = os.path.join(asrBlockDir, f"{sessname}_{b}.asr")
+        # with open(asrblockfile,'a') as outfile:
+        #     outfile.write(res + '\n')
 
         # append all ASR results to a single file
         with open(asrFullFile,'a') as outfile:

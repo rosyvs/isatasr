@@ -270,6 +270,14 @@ for (s in 1:nrow(df)){
   
   
 }
-sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% write.csv(paste0('../annotation/samples_focussed_5inCenter_2022-01-26_', k, '.csv'))
+sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% data.frame()
+sample <- sample%>% rename(!!paste0('sample_start_',k) := 'sample_start')
+sample <- sample%>% rename(!!paste0('sample_end_',k) := 'sample_end')
+if (k==1) {
+  ksamples=sample}else{
+ksamples <-  merge(ksamples, sample, by=c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
+                                     'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
 }
+}
+ksamples %>% write.csv(paste0('../annotation/samples_focussed_5inCenter_2022-01-26.csv'))
 ```

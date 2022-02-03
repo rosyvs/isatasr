@@ -85,8 +85,7 @@ for sesspath in sesslist:
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
-    # TODO eval the below with custom variable name
-    labelfile = os.path.join(sesspath, opts['labels_fname'].format(sessname=sessname) )
+    labelfile = os.path.join(sesspath, opts['labels_fname'].format(**locals) )
     labels = pd.read_csv(labelfile)
 
     wavfile = os.path.join(sesspath, f'{sessname}.wav')

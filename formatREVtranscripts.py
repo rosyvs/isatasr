@@ -13,7 +13,7 @@ sessDir = os.path.normpath(os.path.expanduser(
 # Sometimes the transcripts were done for 1-minute blocks, other times for the whole session.
 # Parsing the REV transcript filename is different in each case, so make sure to set the following flag correctly
 blocked = False
-deidentify = True # attempts to redact names from the transcript
+deidentify = True # attempts to redact names from the transcript TODO
 
 
 # loop over files and convert

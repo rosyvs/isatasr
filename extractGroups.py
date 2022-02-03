@@ -16,7 +16,7 @@ sample_width = 2
 sample_rate = 48000
 bit_depth = 16
 
-datadir = './data/deepSampleFull/'
+datadir = './data/deepSampleFull/' # full length audio is expected to be in session dirs already
 outdir_stem = './data/deepSample2/'
 extract_timings_csv = './configs/deepSample2_to_extract.csv'
 
