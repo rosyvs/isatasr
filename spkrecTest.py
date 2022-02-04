@@ -1,7 +1,5 @@
 import torchaudio
 from torch import tensor, cat, squeeze
-import wave
-import glob
 import os
 import pandas as pd
 import numpy as np
@@ -12,13 +10,13 @@ from speechbrain.utils.metric_stats import EER
 speechbrain_dir = "/Users/roso8920/Dropbox (Emotive Computing)/iSAT/speechbrain/"
 
 #####
-verstr = 'spkv_test4_debug'
+verstr = 'deepSample2_EvT_10s'
 precompute_targets=True # set to false for tests of sample-sample pairings
 model_type = 'ecapa' # 'ecapa' or 'xvect'
 # plot_tsne = True # plot clustering of embeddings color coded by label. < TSNE too slow on laptop
 #####
 
-test_cfg_file = os.path.join('configs','speaker_verification','tests', f'{verstr}_config.csv')
+test_cfg_file = os.path.join('configs','speaker_verification','tests', f'{verstr}_testpairs.csv')
 test_cfg = pd.read_csv(test_cfg_file, index_col=False)
 
 # load models

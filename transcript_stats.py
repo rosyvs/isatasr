@@ -10,9 +10,10 @@ from natsort import natsorted
 
 # loop over sessions in control file and get stats on transcripts
 
-args_ctl = os.path.join('configs', 'deep5.txt')
-verstr = 'deepSample_REV'
-transcriptDirPattern = 'transcripts'
+ctlfile = 'deepSample2'
+args_ctl =os.path.join('configs', f'{ctlfile}.txt')
+verstr = 'deepSample2'
+transcriptDirPattern = 'ELANtranscript'
 
 with open(args_ctl) as ctl: # reads lines without empties
     sesslist = (line.rstrip() for line in ctl) 
@@ -65,5 +66,5 @@ for sesspath in sesslist:
 
     all_sess_data.append(sess_data)
 
-# Summary of WER over all requested sessions
+# Summary of transcript over all requested sessions
 pd.concat(all_sess_data).to_csv( f'results/transcript_stats_{verstr}.csv',index=False, float_format='%.3f') 

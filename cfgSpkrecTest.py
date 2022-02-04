@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import re
 import random
-import itertools
+import json
 from pydub.audio_segment import AudioSegment, effects
 
 # generates configuration files for speaker verification tests, given a label file for each session
@@ -12,15 +12,16 @@ from pydub.audio_segment import AudioSegment, effects
 opts = {}
 opts['frame_dur_s'] = 1.5
 opts['frame_shift_s'] = 0.5
-opts['sessions'] = os.path.join('configs', '4SG.txt') # path to session list 
+opts['sessions'] = os.path.join('configs', 'deepSample2.txt') # path to session list 
 opts['simulate_enrollment'] = True # simulate enrollment by extracting first utterances to use as target
-opts['target_combinations'] = True # make additional enrollment samples by combining existing samples
+opts['enrollment_sec'] = 10
+opts['target_combinations'] = False # make additional enrollment samples by combining existing samples
 opts['targets_dir'] = 'targets' # subdir of session directory containing enrollment audio (will create if simulating)
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
-opts['cross_session'] = False # If True, pairings between sessions; if False, pairings within session only
+opts['cross_session'] = False # TODO If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrollment and samples only
-opts['density'] = 0.1 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
-opts['verstr'] = 'spkv_test4_debug' # will save the configuration with this filename
+opts['density'] = 0.01 # float. Proportion of all possible pairings to use. If <1.0 will randomly sample from density*n pairings
+opts['verstr'] = 'deepSample2_EvT_10s' # will save the configuration with this filename
 opts['label_type'] = 'multi' # 'multi' allows the label (for an enrollment or sample) to be a list of speaker IDs. 'best' chooses majority speaker
 
 with open(opts['sessions']) as ctl: # reads lines without empties
@@ -71,8 +72,6 @@ def get_overlap(start1, end1, start2, end2):
 def any_label_match(labels_1, labels_2):
     # check if any labels in list/tuple labels_1 matches any labels in list/tuple labels_2
     # return True if so
-    print(f'labels_1:{labels_1}')
-    print(f'labels_1:{labels_1}')
 
     return any(set(labels_1).intersection(set(labels_2)))
 
@@ -85,7 +84,7 @@ for sesspath in sesslist:
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
-    labelfile = os.path.join(sesspath, opts['labels_fname'].format(**locals) )
+    labelfile = os.path.join(sesspath, opts['labels_fname'].format(**locals()) )
     labels = pd.read_csv(labelfile)
 
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
@@ -105,7 +104,7 @@ for sesspath in sesslist:
             os.makedirs(os.path.join(sesspath, opts['targets_dir']))
         # list speaker IDs
         speakers = list(set(labels['speaker']))
-        enrDur = 10.0 # will concatenate first 10s of utterances from this target
+        enrDur = opts['enrollment_sec']# will concatenate first 10s of utterances from this target
         for t in speakers:
             labels_this_spkr = labels[labels['speaker'].str.match(t)]
             enrAudio = AudioSegment.empty() 
@@ -116,7 +115,7 @@ for sesspath in sesslist:
             enrAudio = enrAudio[0:1000*enrDur]    
             enrFile = os.path.join(sesspath,opts['targets_dir'],f'enrollment_simulated_{t}.wav')        
             enrAudio.export(enrFile ,format='wav')
-            enrollment_list.append((enrFile, 0.0, enrDur,t))
+            enrollment_list.append((enrFile, 0.0, enrDur,[t]))
 
             # remove the audio used for enrollment from the sample list
             keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrDur)>0.0) for elm in sample_list]
@@ -135,7 +134,7 @@ for sesspath in sesslist:
             speaker = re.sub('enrollment_simulated_','',speaker)
             speaker = re.sub('enrollment_','',speaker)
 
-            enrollment_list.append((enrFile, 0.0, enrDur,speaker))
+            enrollment_list.append((enrFile, 0.0, enrDur,[speaker]))
 
     if opts['target_combinations']: # generate pairings of targets and sum enrollment audio
         if not os.path.exists(os.path.join(sesspath, opts['targets_dir'], 'combinations')):
@@ -150,7 +149,7 @@ for sesspath in sesslist:
             #speaker = f'{f1[3]}_ADD_{f2[3]}'
             speaker = [f1[3],f2[3]] # speaker is a list
 
-            enrFile = os.path.join(sesspath,opts['targets_dir'],'combinations', f'{speaker}.wav')        
+            enrFile = os.path.join(sesspath,opts['targets_dir'],'combinations', f'{"_+_".join(speaker)}.wav')        
             enrAudioCombined.export(enrFile ,format='wav')
 
             enrollment_list.append((enrFile, 0.0, enrDur,speaker))
@@ -200,4 +199,7 @@ print(f'Generated speaker verification test config for {opts["verstr"]}')
 print(f'...containing {len(test_cfg)} comparisons')
 print(f'...of which {len(test_cfg_df[test_cfg_df["match"]])} are matched speakers')
 
-test_cfg_df.to_csv(os.path.join('configs','speaker_verification','tests', f'{opts["verstr"]}_config.csv'),index=False)
+# save test list
+test_cfg_df.to_csv(os.path.join('configs','speaker_verification','tests', f'{opts["verstr"]}_testpairs.csv'),index=False)
+with open(os.path.join('configs','speaker_verification','tests', f'{opts["verstr"]}_opts.json'), "w") as dumpfile:
+    json.dump(opts, dumpfile)
