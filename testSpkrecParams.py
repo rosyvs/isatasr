@@ -42,7 +42,7 @@ k = 5 # number of folds
 sessions = os.path.join('configs', 'deepSample2.txt') # txt file list of session paths
 exp_name = 'deepSample2_EvT_10s'
 cfg_dir = os.path.join('configs','speaker_verification', exp_name)
-results_dir = os.path.join('configs','speaker_verification', exp_name)
+results_dir = os.path.join('results','speaker_verification', exp_name)
 os.makedirs(cfg_dir, exist_ok = True)
 os.makedirs(results_dir, exist_ok = True)
 
@@ -97,7 +97,7 @@ for split, (train_index, test_index)  in enumerate(kfolder.split(sesslist)):
         # Apply train threshold to test partition scores
         metrics = spkrecTest.eval_spkrec(test_result, thresh_type='preset', preset_thresh=train_threshold)
         
-        metrics_df = pd.DataFrame(metrics)
+        metrics_df = pd.DataFrame(metrics,index=[0])
         metrics_df['frame_dur_s'] = frame_dur
         metrics_df['split'] = split
         metrics_df['train_EER'] = train_EER
