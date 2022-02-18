@@ -1,5 +1,5 @@
 # extract labelled audio of interest using timestamped transcription
-# make a segmap.txt file based on the ground-truth utterance boundaries from diarized, timestamped transcript
+# read in utt-labels.csv file based on the ground-truth utterance boundaries from diarized, timestamped transcript
 # each utterance becomes a segment
 # segments are blocked to ~1min blocks for comparability to VAD/ sending to REV
 

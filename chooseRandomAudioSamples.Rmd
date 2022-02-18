@@ -18,26 +18,29 @@ ipak(packages)
 ```
 
 Given the data catalog (https://docs.google.com/spreadsheets/d/1Xs5jM9yGRmRbrSxjrRFIUpzbfb-MdcGOi_FyJen6MXk)
-Generate random 3-minute samples under the following constraints
+Generate random 5-minute samples under the following constraints
 - must have a small-group start and end time
 - small-group duration must be greater than sample duration
 - must sample evenly across teachers
-- must sample randomly across groups, omitting those without student names
-- must sample randomly across lessons
+- set number of samples per period (i.e. set of students in class)
+- must sample randomly across groups
+- must sample randomly across lessons (i.e. content)
+
+In center of range:
+- Find exact midpoint of small-group 
+- Choose a range of 5 minutes which includes this midpoint but does not hang over the ends of the recording
+- if SG duration < 5 min, use whole range
+- exclude enrollment - SG is trimmed to largest portion before or after enrollment
+
 
 ```{r options}
-opts.NperTeacher = 4
+opts.NperPeriod = 1
 opts.Duration = 300 # seconds
 
-sheets <- excel_sheets('../Data File Catalog_2021-12-13.xlsx')
-enrollment_check <- read_xlsx('../Data File Catalog_2021-12-13.xlsx', sheet = 'Enrollment Check')
-audio_sheets <- sheets %>% str_subset(pattern = "Audio")
-```
+sheets <- excel_sheets('../Data File Catalog_2022-02-08.xlsx')
+audio_sheets <- sheets %>% str_subset(pattern = "Audio") %>% str_subset(pattern = "Heading", negate = T) 
 
-
-
-```{r loop_over_teachers}
-sample_all <- data.frame()
+sample_all <-  list()
 stats.wide.SGduration <- list()
 count=0
 dtypes = c('text', 'text',
@@ -45,11 +48,11 @@ dtypes = c('text', 'text',
            'text', 'text',
            'text',  'date',   'date','date',
            'date','guess','guess','guess',
-           'guess','date',  'list','text','text','guess','guess','logical','text')
+           'guess','date',  'list','text','text','guess','guess','logical','text', 'guess','guess','guess','guess','guess','guess','guess','guess','guess')
 
 for (sheet in audio_sheets){
   count=count+1
-  df <- read_xlsx('../Data File Catalog_2021-12-13.xlsx', sheet = sheet, na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
+  df <- read_xlsx('../Data File Catalog_2022-02-08.xlsx', sheet = sheet, na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
   names(df) <- names(df) %>% make.names() 
   if (nrow(df) == 0) next
   
@@ -62,7 +65,6 @@ for (sheet in audio_sheets){
   # some of the files do not yet have the small groups start/end time manually verified.
   # fill in Timestamps of small group start/end using Group.Start.Time when missing the timestamp
   df$Timestamp.of.Small.Group.Start[is.na(df$Timestamp.of.Small.Group.Start)] <- as_hms(df$Group.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)])
-  
   df$Timestamp.of.Small.Group.End[is.na(df$Timestamp.of.Small.Group.End)] <- as_hms(df$Group.End.Time[is.na(df$Timestamp.of.Small.Group.End)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.End)])
   
   # replace negative timestamps with 0 (this means smallgroup started before recording)
@@ -70,52 +72,111 @@ for (sheet in audio_sheets){
   
   # Drop rows which still don't have timestamps for both start and end of small groups
   df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End, Names.of.Students))
+  df$Small.Group.Duration <- as_hms(df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start )
   
-  
-  df$Small.Group.Duration <- df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start 
-  
+  # Remove enrollment from small group and adjust start/end time to longest uninterrupted SG duration
+  for (s in 1:nrow(df)){
+    thisrow =  df[s,]
+    if (!is.na(thisrow$'Timestamp.of.Enrollment.Start')){
+      if(thisrow$'Timestamp.of.Enrollment.Start'<thisrow$'Timestamp.of.Small.Group.End'){
+        if(thisrow$'Timestamp.of.Enrollment.End'> thisrow$'Timestamp.of.Small.Group.Start'){
+          print('Small-group contains enrollment')
+          # if enrollment overlaps SG start, trim start of SG
+          if (thisrow$'Timestamp.of.Enrollment.Start' < thisrow$'Timestamp.of.Small.Group.Start'){
+            print(' trimming small-group START to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+          }
+          # if enrollment overlaps SG end, trim end of SG
+          if (thisrow$'Timestamp.of.Enrollment.End' > thisrow$'Timestamp.of.Small.Group.End'){
+            print(' trimming small-group END to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+          }
+          else{        # if enrollment is in middle, trim SG to largest uninterrupted interval
+            i1= thisrow$Timestamp.of.Enrollment.Start- thisrow$Timestamp.of.Small.Group.Start
+            print(paste0(thisrow$Name.of.File,': i1 = ', i1))
+            i2= thisrow$Timestamp.of.Small.Group.End- thisrow$Timestamp.of.Enrollment.End
+            print(paste0(thisrow$Name.of.File,': i2 = ', i2))
+            
+            if (i1>i2 ){
+              thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+              print(paste0('taking SG from before enrollment - duration ',i1, 'sec'))
+            }else{
+              thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+              print(paste0('taking SG from after enrollment - duration ', i2, 'sec'))
+            }
+            
+          }
+        }
+      }
+    }
+    thisrow$Small.Group.Duration <- thisrow$Timestamp.of.Small.Group.End-thisrow$Timestamp.of.Small.Group.Start 
+    df[s,] = thisrow
+  }
   stats.wide.SGduration <-c(stats.wide.SGduration, unlist(df$Small.Group.Duration))
   
   # Drop rows with insufficient SG duration
   df <- df %>% filter(Small.Group.Duration>= opts.Duration)
   
-  # drop rows with issues - do this once Cher says the column has been updated
-  df <- df %>% filter(Issues..0.No..1.Yes. == F)
-  if (nrow(df) < opts.NperTeacher) {print('INSUFFICIENT AUDIO TO GENERATE REQUESTED N SAMPLES') 
-    next}
-  
-  # randomly choose rows for this teacher
-  samp_i <- sample(nrow(df), opts.NperTeacher, replace=F)
-  sample_this <- df[samp_i,]
-  
-  # randomly generate sample start times for each row
-  for (s in 1:nrow(sample_this)){
-    thisrow <- sample_this[s,]
-    sample_this$sample_start[s] <- hms(round(runif(1, as.duration(thisrow$Timestamp.of.Small.Group.Start), as.duration(thisrow$Timestamp.of.Small.Group.End-opts.Duration))))
-    sample_this$sample_end[s] <- as_hms(sample_this$sample_start[s]+hms(opts.Duration))
-    
-  }
-  sample_this$sample_start <- as_hms(sample_this$sample_start)
-  sample_this$sample_end <- as_hms(sample_this$sample_end)
-  
-  sample_all <- bind_rows(sample_all, sample_this)
-  
+  # randomly choose rows for this teacher, grouping by period
+  df <- df %>% group_by(Period) %>% slice_sample(n=opts.NperPeriod)
+  sample_all[[count]] = df # append to list of teacher-wise Dfs
 }
-
-# sample_all$Names.of.Students <- lapply(sample_all$Names.of.Students,paste,collapse = ", ")
+sample_all = bind_rows(sample_all)
 sample_all <- sample_all %>%  mutate(Names.of.Students = gsub("\n", ", ", Names.of.Students))
 
-sample_all <- sample_all %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, sample_start, sample_end, everything()))
-sample_all %>% write.csv('samples_wide_2021-12-14.csv')
+# CHOOSE RANDOM SAMPLE TIMES FOR SELECTED SESSIONS
+count=0
+opts.Duration <- 300
+opts.ChunkBy <- 300 # same as opts.Duration for one single sample 
+opts.nChunk = opts.Duration/opts.ChunkBy
+opts.repeats = 5
+# randomly generate sample start times for each row
+for (k in 1:opts.repeats){
+  sample <- list()
+  
+  for (s in 1:nrow(sample_all)){
+    thisrow <- sample_all[s,]
+    
+    
+    if (hms(opts.Duration) > as_hms(thisrow$Small.Group.Duration)){
+      print(paste0('***WARNING*** insufficient audio for ' , thisrow$Name.of.File))}
+    
+    sample_start_block <- hms(round(as.duration(
+      runif(
+        1,
+        max(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration) - as_hms(opts.Duration)), thisrow$Timestamp.of.Small.Group.Start),
+        min(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration)), as_hms(thisrow$Timestamp.of.Small.Group.End-as_hms(opts.Duration)) ))
+    )))
+    
+    
+    for (i in 1:(opts.nChunk)){
+      count=count+1
+      rowtoadd <- thisrow %>% select(c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
+                                       'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
+      rowtoadd$Small.Group.Duration <- as_hms(rowtoadd$Small.Group.Duration)
+      rowtoadd$sample_start<- as_hms(sample_start_block + hms(opts.ChunkBy*(i-1)))
+      rowtoadd$sample_end<- as_hms(rowtoadd$sample_start+hms(opts.ChunkBy))
+      sample[[count]] <- rowtoadd
+    }
+    
+    
+  }
+  sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% data.frame()
+  sample <- sample%>% rename(!!paste0('sample_start_',k) := 'sample_start')
+  sample <- sample%>% rename(!!paste0('sample_end_',k) := 'sample_end')
+  if (k==1) {
+    ksamples=sample}else{
+      ksamples <-  merge(ksamples, sample, by=c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
+                                                'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
+    }
+}
+ksamples %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-02-08.csv'))
 
-stats.wide.SGcount = nrow(stats.wide.SGduration)
-stats.wide.SGduration.total = duration(sum(unlist(stats.wide.SGduration),na.rm=T))
-stats.wide.SGduration.mean = duration(mean(unlist(stats.wide.SGduration),na.rm=T))
-stats.wide.SGduration.sd = duration(sd(unlist(stats.wide.SGduration),na.rm=T))
-print(stats.wide.SGcount.total)
-print(stats.wide.SGduration.total)
-print(stats.wide.SGduration.mean)
-print(stats.wide.SGduration.sd)
+
+
+
+
+
 
 ```
 
@@ -139,18 +200,19 @@ n_students = length(all_students)
 
 FOCUSSED SAMPLE v2
 Crystal Q2 video
+random timestamp, no restriciton
 ```{r}
 #dtypes = c('list', 'text', 'text', 'text', 'text', 'text', 'text',  'text','date','guess','guess','guess', 'guess','text','text','guess','guess','logical','text')
 dtypes = c('list', 'text', 'text', 'text', 'text', 'text', 'text',  'text','date','guess','guess','guess', 'guess','text')
 
-df <- read_xlsx('../Data File Catalog_2022-01-05.xlsx', sheet = 'Sample 1v2 - Crystal Focused', na=c('','NA','Unknown'), col_types = dtypes, trim_ws=T)
+df <- read_xlsx('../Data File Catalog_2022-02-08.xlsx', sheet = 'Sample 1v2 - Crystal Focused', na=c('','NA','Unknown'), range = cell_cols(1:14), col_types = dtypes, trim_ws=T)
 names(df) <- names(df) %>% make.names() 
 
 df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End, Student.in.Group))
 
 df <- df %>% mutate_at(c( 'Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as_hms)
 
-
+n_unique_groups = df %>% group_by(Student.in.Group) %>% summarise(n())
 
 df$Small.Group.Duration <- df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start 
 # #Drop rows with insufficient SG duration
@@ -174,7 +236,7 @@ sample_this$sample_end <- as_hms(sample_this$sample_end)
 
 sample_this <- sample_this %>%  mutate(Student.in.Group = gsub("\n", ", ", Student.in.Group))
 
-sample_this %>% write.csv('samples_focused_2021-01-26.csv')
+#sample_this %>% write.csv('samples_focused_2021-01-26.csv')
 
 stats.focused.SGduration.total = dseconds(sum(as.numeric(df$Small.Group.Duration),na.rm=T))
 stats.focused.SGduration.mean = dseconds(mean(as.numeric(df$Small.Group.Duration),na.rm=T))
@@ -205,79 +267,79 @@ opts.repeats = 5
 # randomly generate sample start times for each row
 for (k in 1:opts.repeats){
   sample <- list()
-
-for (s in 1:nrow(df)){
-  thisrow <- df[s,]
   
-  # exclude enrollment portion
-  if (!is.na(thisrow$'Timestamp.of.Enrollment.Start')){
-    if(thisrow$'Timestamp.of.Enrollment.Start'<thisrow$'Timestamp.of.Small.Group.End'){
-      if(thisrow$'Timestamp.of.Enrollment.End'> thisrow$'Timestamp.of.Small.Group.Start'){
-        print('Small-group contains enrollment')
-        # if enrollment overlaps SG start, trim start of SG
-        if (thisrow$'Timestamp.of.Enrollment.Start' < thisrow$'Timestamp.of.Small.Group.Start'){
-          print(' trimming small-group START to exclude enrollment')
-        thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
-        }
-                # if enrollment overlaps SG end, trim end of SG
-        if (thisrow$'Timestamp.of.Enrollment.End' > thisrow$'Timestamp.of.Small.Group.End'){
-                    print(' trimming small-group END to exclude enrollment')
-        thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
-        }
-        else{        # if enrollment is in middle, trim SG to largest uninterrupted interval
-          i1= thisrow$Timestamp.of.Enrollment.Start- thisrow$Timestamp.of.Small.Group.Start
-          print(paste0(thisrow$Name.of.File,': i1 = ', i1))
+  for (s in 1:nrow(df)){
+    thisrow <- df[s,]
+    
+    # exclude enrollment portion
+    if (!is.na(thisrow$'Timestamp.of.Enrollment.Start')){
+      if(thisrow$'Timestamp.of.Enrollment.Start'<thisrow$'Timestamp.of.Small.Group.End'){
+        if(thisrow$'Timestamp.of.Enrollment.End'> thisrow$'Timestamp.of.Small.Group.Start'){
+          print('Small-group contains enrollment')
+          # if enrollment overlaps SG start, trim start of SG
+          if (thisrow$'Timestamp.of.Enrollment.Start' < thisrow$'Timestamp.of.Small.Group.Start'){
+            print(' trimming small-group START to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+          }
+          # if enrollment overlaps SG end, trim end of SG
+          if (thisrow$'Timestamp.of.Enrollment.End' > thisrow$'Timestamp.of.Small.Group.End'){
+            print(' trimming small-group END to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+          }
+          else{        # if enrollment is in middle, trim SG to largest uninterrupted interval
+            i1= thisrow$Timestamp.of.Enrollment.Start- thisrow$Timestamp.of.Small.Group.Start
+            print(paste0(thisrow$Name.of.File,': i1 = ', i1))
             i2= thisrow$Timestamp.of.Small.Group.End- thisrow$Timestamp.of.Enrollment.End
-                      print(paste0(thisrow$Name.of.File,': i2 = ', i2))
-
-              if (i1>i2 ){
-                thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
-                print(paste0('taking SG from before enrollment - duration ',i1, 'sec'))
-              }else{
-                thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
-                print(paste0('taking SG from after enrollment - duration ', i2, 'sec'))
-              }
+            print(paste0(thisrow$Name.of.File,': i2 = ', i2))
+            
+            if (i1>i2 ){
+              thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+              print(paste0('taking SG from before enrollment - duration ',i1, 'sec'))
+            }else{
+              thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+              print(paste0('taking SG from after enrollment - duration ', i2, 'sec'))
+            }
+            
+          }
+          # recalcualte the SG duration
+          
           
         }
-        # recalcualte the SG duration
-
-          
       }
     }
+    thisrow$Small.Group.Duration <- thisrow$Timestamp.of.Small.Group.End-thisrow$Timestamp.of.Small.Group.Start 
+    
+    if (hms(opts.Duration) > as_hms(thisrow$Small.Group.Duration)){
+      print(paste0('***WARNING*** insufficient audio for ' , thisrow$Name.of.File))}
+    
+    sample_start_block <- hms(round(as.duration(
+      runif(
+        1,
+        max(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration) - as_hms(opts.Duration)), thisrow$Timestamp.of.Small.Group.Start),
+        min(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration)), as_hms(thisrow$Timestamp.of.Small.Group.End-as_hms(opts.Duration)) ))
+    )))
+    
+    
+    for (i in 1:(opts.nChunk)){
+      count=count+1
+      rowtoadd <- thisrow %>% select(c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
+                                       'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
+      rowtoadd$Small.Group.Duration <- as_hms(rowtoadd$Small.Group.Duration)
+      rowtoadd$sample_start<- as_hms(sample_start_block + hms(opts.ChunkBy*(i-1)))
+      rowtoadd$sample_end<- as_hms(rowtoadd$sample_start+hms(opts.ChunkBy))
+      sample[[count]] <- rowtoadd
+    }
+    
+    
   }
-          thisrow$Small.Group.Duration <- thisrow$Timestamp.of.Small.Group.End-thisrow$Timestamp.of.Small.Group.Start 
-
-  if (hms(opts.Duration) > as_hms(thisrow$Small.Group.Duration)){
-    print(paste0('***WARNING*** insufficient audio for ' , thisrow$Name.of.File))}
-  
-  sample_start_block <- hms(round(as.duration(
-    runif(
-      1,
-      max(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration) - as_hms(opts.Duration)), thisrow$Timestamp.of.Small.Group.Start),
-      min(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration)), as_hms(thisrow$Timestamp.of.Small.Group.End-as_hms(opts.Duration)) ))
-  )))
-  
-  
-  for (i in 1:(opts.nChunk)){
-    count=count+1
-    rowtoadd <- thisrow %>% select(c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
-                                     'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
-    rowtoadd$Small.Group.Duration <- as_hms(rowtoadd$Small.Group.Duration)
-    rowtoadd$sample_start<- as_hms(sample_start_block + hms(opts.ChunkBy*(i-1)))
-    rowtoadd$sample_end<- as_hms(rowtoadd$sample_start+hms(opts.ChunkBy))
-    sample[[count]] <- rowtoadd
-  }
-  
-  
-}
-sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% data.frame()
-sample <- sample%>% rename(!!paste0('sample_start_',k) := 'sample_start')
-sample <- sample%>% rename(!!paste0('sample_end_',k) := 'sample_end')
-if (k==1) {
-  ksamples=sample}else{
-ksamples <-  merge(ksamples, sample, by=c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
-                                     'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
-}
+  sample <- bind_rows(sample)%>% arrange(Name.of.File) %>% data.frame()
+  sample <- sample%>% rename(!!paste0('sample_start_',k) := 'sample_start')
+  sample <- sample%>% rename(!!paste0('sample_end_',k) := 'sample_end')
+  if (k==1) {
+    ksamples=sample}else{
+      ksamples <-  merge(ksamples, sample, by=c('Teacher', 'Period', 'Lesson..', 'Name.of.File', 'URL.to.File','Timestamp.of.Small.Group.Start','Timestamp.of.Small.Group.End','Small.Group.Duration' ,
+                                                'Timestamp.of.Enrollment.Start','Timestamp.of.Enrollment.End'))
+    }
 }
 ksamples %>% write.csv(paste0('../annotation/samples_focussed_5inCenter_2022-01-26.csv'))
 ```

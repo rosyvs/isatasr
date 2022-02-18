@@ -13,25 +13,27 @@ import pandas as pd
 # - enrollment duration
 # - combinatorial enrollments
 
+exp_name = 'deepSample2_EvT_10s_realEnrollment'
+
 ### List of param vals to tune over
-tune_frame_dur = [.5, 1, 1.5, 2, 2.5]
+tune_frame_dur = [.25, .5, .75, 1, 1.5, 2, 2.5, 3, 3.5, 4]
 ###
 
 ### Test configuration options stable over all values of parameter
 opts = {}
 opts['frame_shift_s'] = 0.5
-opts['simulate_enrollment'] = True # simulate enrollment by concatenating utterances to use as target
+opts['simulate_enrollment'] = False # simulate enrollment by concatenating utterances to use as target
 opts['enrollment_sec'] = 10
 opts['target_combinations'] = False # make additional enrollment samples by combining existing samples
-opts['targets_dir'] = 'targets_simulated' # subdir of session directory containing enrollment audio (will create if simulating)
+opts['targets_dir'] = 'enrollment' # subdir of session directory containing enrollment audio (will create if simulating)
 opts['labels_fname'] = 'utt_labels_{sessname}.csv' # relative to session directory
 opts['cross_session'] = False # TODO If True, pairings between sessions; if False, pairings within session only
 opts['sampleVsample'] = False # if True, pairings between all samples; if False, pairings between enrollment and samples only
-opts['density'] = 0.01 # float. Proportion of samples to use. If <1.0 will randomly sample from density*n pairings
+opts['density'] = 0.1 # float. Proportion of samples to use. If <1.0 will randomly sample from density*n pairings
 opts['label_type'] = 'best' # 'multi','best'. multi = list of speaker IDs. 'best' chooses majority speaker
 ###
 
-model_type = 'xvect'
+model_type = 'ecapa'
 precompute_targets = ~opts['sampleVsample'] # only precompute if using target enrollment
 
 
@@ -40,7 +42,6 @@ precompute_targets = ~opts['sampleVsample'] # only precompute if using target en
 
 k = 5 # number of folds 
 sessions = os.path.join('configs', 'deepSample2.txt') # txt file list of session paths
-exp_name = 'deepSample2_EvT_10s'
 cfg_dir = os.path.join('configs','speaker_verification', exp_name)
 results_dir = os.path.join('results','speaker_verification', exp_name)
 os.makedirs(cfg_dir, exist_ok = True)
@@ -54,8 +55,6 @@ kfolder = KFold(n_splits = k, shuffle = True, random_state = 303)
 
 all_metrics = []
 for split, (train_index, test_index)  in enumerate(kfolder.split(sesslist)):
-    print(split)
-    print("TRAIN:", train_index, "TEST:", test_index)
     train_sess = [sesslist[i] for i in train_index]
     test_sess = [sesslist[i] for i in test_index]
 
@@ -104,8 +103,22 @@ for split, (train_index, test_index)  in enumerate(kfolder.split(sesslist)):
         metrics_df['train_thresh'] = train_threshold
         metrics_df['test_EER'] = test_EER
         metrics_df['test_thresh'] = test_threshold
+        metrics_df['train_N'] = len(train_pairs_df)
+        metrics_df['test_N'] = len(test_pairs_df)
+        metrics_df['train_Ntargets'] = len(set([t for s in train_result["x1speaker"] for t in s ]))
+        metrics_df['test_Ntargets'] = len(set([t for s in test_result["x1speaker"] for t in s ]))
 
+        # write metrics to txt for monitoring progress
+        with open(os.path.join(results_dir,\
+            opts["verstr"].format(**locals()) + f'_{model_type}_summary.txt'), "w") as dumpfile:
+            for col, val in metrics_df.iteritems(): 
+                stri = f'{col}: {val.values.item()}'
+                dumpfile.write(stri + '\n')
 
 
         all_metrics.append(metrics_df)
-all_metrics = pd.concat(all_metrics).to_csv(os.path.join(results_dir, 'results.csv'))
+all_metrics = pd.concat(all_metrics)
+all_metrics.to_csv(os.path.join(results_dir, f'{exp_name}_{model_type}_results.csv'))
+
+grouped = all_metrics.groupby('frame_dur_s',as_index=True).mean().reset_index()
+grouped.to_csv(os.path.join(results_dir, f'{exp_name}_{model_type}_results_by_group.csv'))

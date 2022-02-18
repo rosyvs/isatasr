@@ -5,9 +5,9 @@ import os
 import re
 import argparse
 import pandas as pd
-#from google.cloud import speech
-from google.cloud import speech_v1p1beta1 as speech # need the beta for diarizaiton
-from google.cloud import storage
+from google.cloud import speech, storage
+from rosy_asr_utils import transcribe_diarize_file_async, create_bucket, upload_blob
+
 from datetime import datetime
 import shutil
 import pathlib
@@ -22,79 +22,6 @@ storage_client = storage.Client.from_service_account_json("isatasr-91d68f52de4d.
 
 args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
 # args_ctl =os.path.join('configs', 'one_sess.txt')
-
-def transcribe_diarize_file_async(speech_uri, client):
-    """Transcribe the given audio file using Google cloud speech."""
-
-    audio =speech.RecognitionAudio(uri=speech_uri); 
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
-        language_code="en-US",
-        enable_speaker_diarization=True,
-        enable_word_time_offsets=True,
-        diarization_speaker_count=6,
-        model="video"
-    )
-
-    operation = client.long_running_recognize(config=config, audio=audio)
-    print('Waiting for recognition to complete...')
-    response = operation.result(timeout=3600) # timeout in seconds, default is too short
-    result = response.results[-1] # the final element contains the actual transcript
-    best = result.alternatives[0].words # choose most likely result
-    
-    # loop over each word and format the transcript
-    transcript=[]
-    speaker_tags = []
-    speaker_last = None
-    words = []
-    for w in best:
-        words.append({'start_time' : w.start_time.total_seconds(),
-        'end_time' : w.end_time.total_seconds(),
-        'speaker_tag' : w.speaker_tag,
-        'word' : w.word})
-        if (speaker_last == w.speaker_tag):
-            transcript.append(w.word)
-        else: 
-            transcript.append(f"\n{w.start_time.total_seconds()}s (speaker {w.speaker_tag}): {w.word}")
-        speaker_tags.append(w.speaker_tag)
-        speaker_last = w.speaker_tag
-    print(' '.join(transcript))
-
-    return transcript, words
-
-def create_bucket(bucket_name, storage_client):
-    """Create a new bucket in specific location with storage class"""
-    # bucket_name = "your-new-bucket-name"
-
-    bucket = storage_client.bucket(bucket_name)
-    if not bucket.exists():
-        bucket.storage_class = "STANDARD"
-        bucket = storage_client.create_bucket(bucket, location="us")
-        print(f"Created bucket {bucket.name} in {bucket.location} with storage class {bucket.storage_class}")
-    else:
-        print(f"Bucket {bucket_name} already existed")
-    return bucket
-
-def upload_blob(source_file_name, bucket_name, destination_blob_name, storage_client):
-    """Uploads a file to the bucket."""
-    # The ID of your GCS bucket
-    # bucket_name = "your-bucket-name"
-    # The path to your file to upload
-    # source_file_name = "local/path/to/file"
-    # The ID of your GCS object
-    # destination_blob_name = "storage-object-name"
-    
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    print(f"Uploading {source_file_name} - please wait.")
-
-    ## For slow upload speed
-    storage.blob._DEFAULT_CHUNKSIZE = 2097152 # 10242 MB
-    storage.blob._MAX_MULTIPART_SIZE = 2097152 # 2 MB
-    blob.upload_from_filename(source_file_name,timeout=600.0)
-
-    print(f"File {source_file_name} uploaded.")
 
 # ctl has list of paths to sessions to process
 #for sesspath in open(args.ctl):

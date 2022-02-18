@@ -73,6 +73,7 @@ def configure_spkrecTest(opts):
     for sesspath in opts['sessions']: 
         sesspath = sesspath.strip()
         sessname = os.path.basename(sesspath)
+        print(f'______{sessname}______')
         wavfile = os.path.join(sesspath, f'{sessname}.wav')
         labelfile = os.path.join(sesspath, opts['labels_fname'].format(**locals()) )
         labels = pd.read_csv(labelfile)
@@ -98,10 +99,14 @@ def configure_spkrecTest(opts):
             for t in speakers:
                 labels_this_spkr = labels[labels['speaker'].str.match(t)]
                 enrAudio = AudioSegment.empty() 
-                starts_ms  = labels_this_spkr['start_sec'].to_list()*1000
-                ends_ms = labels_this_spkr['end_sec'].to_list()*1000
+                starts_s  = labels_this_spkr['start_sec'].to_list()
+                ends_s = labels_this_spkr['end_sec'].to_list()
                 while enrAudio.duration_seconds <enrDur:
-                    enrAudio += audio[starts_ms.pop(0)*1000 : ends_ms.pop(0)*1000]
+                    if starts_s:
+                        enrAudio += audio[starts_s.pop(0)*1000: ends_s.pop(0)*1000]
+                    else: # repeat if exhausted all utterances
+                        enrAudio += enrAudio
+
                 enrAudio = enrAudio[0:1000*enrDur]    
                 enrFile = os.path.join(sesspath,opts['targets_dir'],f'enrollment_simulated_{t}.wav')        
                 enrAudio.export(enrFile ,format='wav')
@@ -110,7 +115,7 @@ def configure_spkrecTest(opts):
                 # remove the audio used for enrollment from the sample list
                 keep_ix = [not(elm[3]==t and get_overlap(elm[1], elm[2], 0.0, enrDur)>0.0) for elm in sample_list]
                 sample_list = [sample_list[i] for i in range(0,len(keep_ix)) if keep_ix[i]]
-
+ 
         else: # read enrollment from targets_dir
             found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,opts['targets_dir'])) if f.endswith('.wav')]
             print(f'found {len(found_enrFiles)} enrollment audio files...')
@@ -136,7 +141,7 @@ def configure_spkrecTest(opts):
                 enrAudio2 = AudioSegment.from_file( f2[0])
                 enrDur = min(enrAudio1.duration_seconds, enrAudio2.duration_seconds)
                 enrAudioCombined = effects.normalize(effects.normalize(enrAudio1[0:enrDur*1000]).overlay(effects.normalize(enrAudio2[0:enrDur*1000])))
-                speaker = [f1[3],f2[3]] # speaker is a list
+                speaker = f1[3] + f2[3] # speaker is a list
 
                 enrFile = os.path.join(sesspath,opts['targets_dir'],'combinations', f'{"_+_".join(speaker)}.wav')        
                 enrAudioCombined.export(enrFile ,format='wav')
@@ -219,13 +224,12 @@ def df_spkrVerification(row, encoder, verifier, target_embeddings=None):
     xv2 = encoder.encode_batch(x2)
 
     score = verifier.similarity(xv1,xv2)
-    print(f'#{row.name}: {row["x1speaker"]} vs {row["x2speaker"]}. Verification score: {score.item()}')
+    # print(f'#{row.name}: {row["x1speaker"]} vs {row["x2speaker"]}. Verification score: {score.item()}')
     row['score'] = score.item()
     return row
 
 def run_spkrecTest(testpairs_df,model_type='xvect', precompute_targets = True):
     global speechbrain_dir
-    print(speechbrain_dir)
     # load models
     if model_type == 'ecapa':
         encoder = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", 
@@ -243,7 +247,7 @@ def run_spkrecTest(testpairs_df,model_type='xvect', precompute_targets = True):
         # precompute embeddings for enrollment targets (x1) and save in a dict w filepath as key
         target_files = list(set(testpairs_df['x1path']))
         target_embeddings = {}
-        print('precomputing target embeddings...')
+        print('Precomputing target embeddings...')
         for t in target_files:
             signal, fs = torchaudio.load(t)
             if not fs == 16000:
@@ -251,7 +255,9 @@ def run_spkrecTest(testpairs_df,model_type='xvect', precompute_targets = True):
                 to16k = torchaudio.transforms.Resample(fs, 16000)
                 signal = to16k(signal)
             target_embeddings[t] = encoder.encode_batch(signal)
-        
+    
+    print(f'Computing verification scores for {len(testpairs_df)} pairs...')
+
     # iterate over test pairings
     result = testpairs_df.apply(df_spkrVerification,
         encoder=encoder, verifier=verifier, target_embeddings=target_embeddings,

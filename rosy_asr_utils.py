@@ -10,6 +10,10 @@ import re
 import wave
 from pydub import AudioSegment
 from google.cloud import speech
+from google.cloud import speech_v1p1beta1 as speechB # need the beta for diarizaiton
+from google.cloud import speech_v1 as speech1 # need the beta for diarizaiton
+
+from google.cloud import storage
 
 
 ######################
@@ -184,6 +188,108 @@ def transcribe_bytestream(bytes, client,srate):
 
     return('\n'.join(result))
 
+def transcribeExtra_bytestream(bytes, client,srate):
+    """Transcribe the given audio bytestream using Google cloud speech, returning full output 
+    including confidence, diarization, alternatives"""
+
+    audio = speech1.RecognitionAudio(content=bytes)
+    config = speech1.RecognitionConfig(
+        encoding=speech1.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=srate,
+        enable_word_time_offsets=True,
+        language_code="en-US",
+        use_enhanced=True,
+        model="video",
+        enable_word_confidence = True,
+        max_alternatives = 30)
+    result=[]
+        
+    response = client.recognize(config=config, audio=audio)
+
+    # Each result is for a consecutive portion of the audio. Iterate through
+    # them to get the transcripts for the entire audio file.
+    best = ''
+    for r in response.results:
+        # The first alternative is the most likely one for this portion.
+        best = r.alternatives[0].transcript
+        result.append(best)
+        print(best)
+
+
+    return(response, best)
+    
+def transcribe_diarize_file_async(speech_uri, client):
+    """Transcribe the given audio file using Google cloud speech."""
+
+    audio =speechB.RecognitionAudio(uri=speech_uri)
+    config = speechB.RecognitionConfig(
+        encoding=speechB.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="en-US",
+        enable_speaker_diarization=True,
+        enable_word_time_offsets=True,
+        diarization_speaker_count=6,
+        use_enhanced=True,
+        model="video"    )
+
+    operation = client.long_running_recognize(config=config, audio=audio)
+    print('Waiting for recognition to complete...')
+    response = operation.result(timeout=3600) # timeout in seconds, default is too short
+    result = response.results[-1] # the final element contains the actual transcript
+    best = result.alternatives[0].words # choose most likely result
+    
+    # loop over each word and format the transcript
+    transcript=[]
+    speaker_tags = []
+    speaker_last = None
+    words = []
+    for w in best:
+        words.append({'start_time' : w.start_time.total_seconds(),
+        'end_time' : w.end_time.total_seconds(),
+        'speaker_tag' : w.speaker_tag,
+        'word' : w.word})
+        if (speaker_last == w.speaker_tag):
+            transcript.append(w.word)
+        else: 
+            transcript.append(f"\n{w.start_time.total_seconds()}s (speaker {w.speaker_tag}): {w.word}")
+        speaker_tags.append(w.speaker_tag)
+        speaker_last = w.speaker_tag
+    print(' '.join(transcript))
+
+    return transcript, words
+
+def create_bucket(bucket_name, storage_client):
+    """Create a new bucket in specific location with storage class"""
+    # bucket_name = "your-new-bucket-name"
+
+    bucket = storage_client.bucket(bucket_name)
+    if not bucket.exists():
+        bucket.storage_class = "STANDARD"
+        bucket = storage_client.create_bucket(bucket, location="us")
+        print(f"Created bucket {bucket.name} in {bucket.location} with storage class {bucket.storage_class}")
+    else:
+        print(f"Bucket {bucket_name} already existed")
+    return bucket
+
+def upload_blob(source_file_name, bucket_name, destination_blob_name, storage_client):
+    """Uploads a file to the bucket."""
+    # The ID of your GCS bucket
+    # bucket_name = "your-bucket-name"
+    # The path to your file to upload
+    # source_file_name = "local/path/to/file"
+    # The ID of your GCS object
+    # destination_blob_name = "storage-object-name"
+    
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    print(f"Uploading {source_file_name} - please wait.")
+
+    ## For slow upload speed
+    storage.blob._DEFAULT_CHUNKSIZE = 2097152 # 10242 MB
+    storage.blob._MAX_MULTIPART_SIZE = 2097152 # 2 MB
+    blob.upload_from_filename(source_file_name,timeout=600.0)
+
+    print(f"File {source_file_name} uploaded.")
 
 ######################
 # text formatting and WER functions

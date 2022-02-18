@@ -10,7 +10,7 @@ import csv
 # assumes 1 segment = 1 utterance! 
 ctlfile = 'deepSample2'
 args_ctl =os.path.join('configs', f'{ctlfile}.txt')
-asrType = 'asr_segwise'
+asrType = 'asr_watson_segwise'
 transcriptType = 'ELANtranscript_segwise'
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
 
@@ -110,7 +110,7 @@ for sesspath in sesslist:
         # make Df to store segmentwise metrics
         segwise_wer = pd.DataFrame(seg_data, columns = ['session','segment','speaker','speaker_type','asr_exists','asr_wordcount',' transcript_exists','transcript_wordcount',\
         'wer','mer','substitutions','deletions','insertions'])
-        segwise_wer.to_csv(os.path.join(sesspath, f'segwise_wer_cf{transcriptType}_{sessname}.csv') ) 
+        segwise_wer.to_csv(os.path.join(sesspath, f'segwise_wer_{asrType}_VS_{transcriptType}_{sessname}.csv') ) 
         segwise_wer['session'] =     segwise_wer['session'].astype('str') # because pandas saves as an object (??) datatype which can't be grouped by
         segwise_wer['speaker'] =     segwise_wer['speaker'].astype('str') # because pandas saves as an object (??) datatype which can't be grouped by
         segwise_wer['speaker_type'] =     segwise_wer['speaker_type'].astype('str') # because pandas saves as an object (??) datatype which can't be grouped by
@@ -143,7 +143,7 @@ for sesspath in sesslist:
 
         sess_summary = sess_summary.append(by_speaker_type, ignore_index=True).reset_index(drop=True, inplace=False)
 
-        sess_summary.to_csv(os.path.join(sesspath, f'segwise_wer_SUMMARY_cf{transcriptType}_{sessname}.csv'), index=False )
+        sess_summary.to_csv(os.path.join(sesspath, f'segwise_wer_SUMMARY_{asrType}_VS_{transcriptType}_{sessname}.csv'), index=False )
         
         all_sess_seg_wer.append(segwise_wer)
 
@@ -164,7 +164,7 @@ all_by_speakerType = all_sess_seg_wer.groupby('speaker_type',sort=False,as_index
 all_by_sessXspeakerType = all_sess_seg_wer.groupby(['session','speaker_type'],sort=False,as_index=False).apply(wer_df_summary).reset_index()
 
 #pd.concat(all_sess_seg_wer).to_csv( f'results/sesswise_wer_{verstr}.csv',index=False, float_format='%.3f') 
-with pd.ExcelWriter(f'results/sesswise_WER_bygroups_{ctlfile}_VS_{transcriptType}.xlsx',engine='xlsxwriter',
+with pd.ExcelWriter(f'results/sesswise_WER_bygroups_{ctlfile}_{asrType}_VS_{transcriptType}.xlsx',engine='xlsxwriter',
                         engine_kwargs={'options': {'strings_to_numbers': True}}) as writer:
     all_by_sess.to_excel(writer, sheet_name='by_session')
     all_by_speaker.to_excel(writer, sheet_name='by_speaker')
