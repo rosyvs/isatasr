@@ -21,7 +21,6 @@ dependencies:
   - ca-certificates
   - xz
   - tk
-  - appnope
   - jupyter_core
   - six
   - readline
@@ -42,7 +41,6 @@ dependencies:
   - certifi
   - decorator
   - setuptools
-  - libcxx
   - pexpect
   - pyzmq
   - sqlite
