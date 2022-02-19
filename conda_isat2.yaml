@@ -1,0 +1,52 @@
+name: isat2
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pylint
+  - ipykernel
+  - pandas
+  - zlib
+  - pygments
+  - prompt-toolkit
+  - jedi
+  - libffi
+  - parso
+  - wcwidth
+  - nest-asyncio
+  - libsodium
+  - pickleshare
+  - ncurses
+  - ipython
+  - ca-certificates
+  - xz
+  - tk
+  - appnope
+  - jupyter_core
+  - six
+  - readline
+  - entrypoints
+  - debugpy
+  - tornado
+  - traitlets
+  - python-dateutil
+  - zeromq
+  - wheel
+  - jupyter_client
+  - ptyprocess
+  - backcall
+  - tzdata
+  - matplotlib-inline
+  - pip
+  - openssl
+  - certifi
+  - decorator
+  - setuptools
+  - libcxx
+  - pexpect
+  - pyzmq
+  - sqlite
+  - ipython_genutils
+  - scikit-learn
+  - numpy
+prefix: /usr/local/Caskroom/miniconda/base/envs/isat2

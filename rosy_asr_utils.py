@@ -332,6 +332,7 @@ def format_text_for_wer(text):
     text = strip_punct(text)
     text = text.lower()
     text = remove_in_brackets(text) # removes non-spoken annotations such as [inaudible]
+    text = re.sub('%\w+','', text) # remove %HESITATION etc
     text = re.sub('\s+',' ',text) # replace multiple space with single
     return text
 
