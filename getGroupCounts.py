@@ -11,3 +11,5 @@ with open(groupFile,encoding='utf-8-sig') as in_file:
     print(f'number of strictly unique groups: {len(counts)}')
 
     # TODO allow for absences - set containmnet = same group
+
+    
