@@ -99,13 +99,13 @@ for sesspath in sesslist:
                 aligned['segment'] = s
                 aligned_segwise.append(aligned)
             else:
-                wer = None
-                wer_meas = {'mer':None,'substitutions':None, 'deletions':None, 'insertions':None }
+                continue
+
             spk_type = 'TEACHER' if 'Teacher' in speaker else 'STUDENT'    
             seg_data.append([sessname,  s, speaker,spk_type,asr_exists, asr_wordcount, transcript_exists, transcript_wordcount, \
                 wer,wer_meas['mer'],wer_meas['substitutions'], wer_meas['deletions'],wer_meas['insertions']])
         aligned_segwise = pd.concat(aligned_segwise)
-        aligned_segwise.to_csv(os.path.join(sesspath,f'alignment_segwise_cf{transcriptType}_{sessname}.csv'), index=False)
+        aligned_segwise.to_csv(os.path.join(sesspath,f'alignment_segwise_{asrType}_VS_{transcriptType}_{sessname}.csv'), index=False)
 
         # make Df to store segmentwise metrics
         segwise_wer = pd.DataFrame(seg_data, columns = ['session','segment','speaker','speaker_type','asr_exists','asr_wordcount',' transcript_exists','transcript_wordcount',\
@@ -147,7 +147,9 @@ for sesspath in sesslist:
         
         all_sess_seg_wer.append(segwise_wer)
 
+# all segments
 all_sess_seg_wer = pd.concat(all_sess_seg_wer)
+
 # Summary of WER over all requested sessions
 
 # this is just for codec testing - set by_codec false if does not apply

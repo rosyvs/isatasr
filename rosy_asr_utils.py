@@ -8,6 +8,8 @@ import collections
 import contextlib
 import re
 import wave
+from num2words import num2words
+from decimal import InvalidOperation
 from pydub import AudioSegment
 from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speechB # need the beta for diarizaiton
@@ -217,6 +219,38 @@ def transcribeExtra_bytestream(bytes, client,srate):
 
 
     return(response, best)
+
+def transcribe_short_bytestream(bytes, client,srate):
+    """Transcribe the given audio bytestream using Google cloud speech, optimized for short utterances"""
+
+    #audio = speech.RecognitionAudio(content=bytes)
+    stream = [bytes]
+    
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=srate,
+        language_code="en-US")
+    config = speech.StreamingRecognitionConfig(config=config, single_utterance = True
+    )   
+
+    requests = (speech.StreamingRecognizeRequest(audio_content=chunk) for chunk in stream )
+    result=[]
+    try:
+        responses = client.streaming_recognize(config=config, requests=requests)
+
+        # Each result is for a consecutive portion of the audio. Iterate through
+        # them to get the transcripts for the entire audio file.
+        for response in responses:
+            for r in response.results:
+                # The first alternative is the most likely one for this portion.
+                best = r.alternatives[0].transcript
+                result.append(best)
+                print(best)
+    except Exception as ex:
+        print(f"An exception of type {type(ex).__name__} occurred.")
+        raise ex
+
+    return('\n'.join(result))
     
 def transcribe_diarize_file_async(speech_uri, client):
     """Transcribe the given audio file using Google cloud speech."""
@@ -298,9 +332,9 @@ def upload_blob(source_file_name, bucket_name, destination_blob_name, storage_cl
 def strip_punct(instr):
     newstr = ''
     for word in instr.split():
-	# delete truncated words
-        if word.endswith('-'): continue
- 
+	    # delete punct
+        word = word.strip(string.punctuation)
+
         # delete commas inside numbers
         m = re.match(r'(\d*),(\d)', word)
         if m != None:
@@ -309,6 +343,8 @@ def strip_punct(instr):
         # commas inside words become space
         word = re.sub(",", " ", word)
 
+        # hyphens inside words become space
+        word = re.sub("-", " ", word)
         word = word.strip()
 
         newstr += ' ' + word
@@ -319,6 +355,11 @@ def remove_in_brackets(text):
     # removes any clause in brackets or parens, and the brackets themselves
     return re.sub("[\(\[].*?[\)\]]+", " ", text)
 
+def caught_num2words(str):
+    try:
+        return num2words(str)
+    except (InvalidOperation, ValueError) as error:
+        return str
 
 def format_text_for_wer(text):
     # function to format text or lists of text (e.g. asr, transcript) for wer computation. 
@@ -326,14 +367,17 @@ def format_text_for_wer(text):
     # note that the clean_REV_transcript function should be applied first to remove REV-specific keywords 
     # and extract text from docx format tables
 
+    
     if isinstance(text,list):
         text = ' '.join(text)
     text = text.replace('\n',' ') # replace newline with space
+    text = remove_in_brackets(text) # removes non-spoken annotations such as [inaudible]
+    text = ' '.join([caught_num2words(str) for str in text.split(' ')]) # spell out numbers
     text = strip_punct(text)
     text = text.lower()
-    text = remove_in_brackets(text) # removes non-spoken annotations such as [inaudible]
     text = re.sub('%\w+','', text) # remove %HESITATION etc
     text = re.sub('\s+',' ',text) # replace multiple space with single
+
     return text
 
 def clean_REV_transcript(docx_fname, txt_fname):
@@ -367,6 +411,14 @@ def HHMMSS_to_sec(time_str):
     else:
         print(f'input string format not supported: {time_str}')
     return int(h) * 3600 + int(m) * 60 + float(s) 
+
+def name_counter(str):
+    patterns = ['\[redacted[\w\s]*\]', '\[Student \d+\]+']
+    N = 0
+    for p in patterns:
+        N+=len(re.findall(p, str,re.IGNORECASE))
+    return N
+
 
 
 def align_words(ref,hyp):
