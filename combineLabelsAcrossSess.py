@@ -12,7 +12,7 @@ label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session director
 asrTypes = {'Google':'asr_segwise','Watson': 'asr_watson_segwise'} # Friendly label:directory name
 
 all_sess = []
-
+utt_counter = 0
 
 # ITERATE OVER SESSIONS
 with open(args_ctl) as ctl:
@@ -36,13 +36,19 @@ for sesspath in sesslist:
     label_df['lesson'] = re.search('SI_+L(\d)', sessname, re.IGNORECASE).group(1)
 
 
-    label_df.reset_index(inplace=True)
-    label_df = label_df.rename(columns={"index":"utterance_in_session","utterance":"transcript"})
+
+
     label_df["transcript_type"] = 'human'
 
-    label_df['transcript_norm'] = label_df['transcript'].apply(format_text_for_wer)
-    label_df['wordcount'] = label_df['transcript'].apply(lambda x: len(x.split()))
+    label_df['transcript_norm'] = label_df['utterance'].apply(format_text_for_wer)
+    label_df['wordcount'] = label_df['utterance'].apply(lambda x: len(x.split()))
     label_df['norm_wordcount'] = label_df['transcript_norm'].apply(lambda x: len(x.split()))
+    # filter out empty utterances 
+    label_df = label_df[label_df['norm_wordcount'] >0]
+
+    label_df.reset_index(inplace=True)
+    label_df = label_df.rename(columns={"index":"utterance_in_session","utterance":"transcript"})
+    label_df['utterance_overall'] = label_df.index + utt_counter
 
     # count student names in transcript
     label_df['names_count'] = label_df['transcript'].apply(name_counter)
@@ -52,10 +58,11 @@ for sesspath in sesslist:
     label_df["substitutions"] = None
     label_df["deletions"] = None
     label_df["insertions"] = None
-    # filter out empty utterances 
-    label_df = label_df[label_df['norm_wordcount'] >0]
+
 
     sess_df = label_df
+    utt_counter += len(label_df)
+
 
     # get ASR results
     for a in asrTypes:
@@ -109,7 +116,27 @@ for sesspath in sesslist:
 
 
 all_sess_df = pd.concat(all_sess)
-all_sess_df.reset_index(drop=True,inplace=True)
-all_sess_df = all_sess_df.rename(columns={"index":"utterance_overall"})
 
-all_sess_df.to_csv(os.path.join('..','annotation', 'combinedLabelsDeepSample2.csv'))
+
+all_sess_df = all_sess_df[[
+    'utterance_overall',
+    'utterance_in_session',
+    'sessionID',
+    'lesson',
+    'speaker',
+    'transcript_type',
+    'transcript',
+    'transcript_norm',
+    'start_sec',
+    'end_sec',
+    'wordcount',
+    'norm_wordcount',
+    'names_count',
+    'wer',
+    'substitutions',
+    'deletions',
+    'insertions'
+]
+]
+
+all_sess_df.to_csv(os.path.join('..','annotation', 'ASRDeepSample2.csv'))
