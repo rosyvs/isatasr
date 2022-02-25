@@ -10,7 +10,7 @@ import csv
 # assumes 1 segment = 1 utterance! 
 ctlfile = 'deepSample2'
 args_ctl =os.path.join('configs', f'{ctlfile}.txt')
-asrType = 'asr_watson_segwise'
+asrType = 'asr_short_segwise'
 transcriptType = 'ELANtranscript_segwise'
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
 

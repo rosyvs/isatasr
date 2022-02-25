@@ -372,10 +372,10 @@ def format_text_for_wer(text):
         text = ' '.join(text)
     text = text.replace('\n',' ') # replace newline with space
     text = remove_in_brackets(text) # removes non-spoken annotations such as [inaudible]
+    text = re.sub('%\w+','', text) # remove %HESITATION etc
     text = ' '.join([caught_num2words(str) for str in text.split(' ')]) # spell out numbers
     text = strip_punct(text)
     text = text.lower()
-    text = re.sub('%\w+','', text) # remove %HESITATION etc
     text = re.sub('\s+',' ',text) # replace multiple space with single
 
     return text
