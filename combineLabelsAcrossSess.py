@@ -9,7 +9,7 @@ import jiwer
 
 args_ctl =os.path.join('configs', 'deepSample2.txt') # list of session directories to extract segments from
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
-asrTypes = {'Google':'asr_segwise','Watson': 'asr_watson_segwise'} # Friendly label:directory name
+asrTypes = {'Google':'asr_segwise','Watson': 'asr_watson_segwise','WatsonConcat':'asr_watson_concat_segwise'} # Friendly label:directory name
 
 all_sess = []
 utt_counter = 0
@@ -30,13 +30,16 @@ for sesspath in sesslist:
     # get group TODO group ID
     group = set([s  for s in label_df['speaker'] if re.search('Student' ,s,re.IGNORECASE)])
 
-    label_df['sessionID'] = sessname
+    label_df['recordingID'] = sessname
+
+    
 
     # get lesson no
     label_df['lesson'] = re.search('SI_+L(\d)', sessname, re.IGNORECASE).group(1)
 
+    label_df['period'] = re.search('SI_+L\d_p(\d)', sessname, re.IGNORECASE).group(1)
 
-
+    # get an identifier for class instance (combo of lesson, period, date)
 
     label_df["transcript_type"] = 'human'
 
@@ -94,7 +97,7 @@ for sesspath in sesslist:
                
 
                             
-            #allASR[a].append(utterance_in_session, speaker, asr, start_sec, end_sec, lesson, sessionID, a, names_count , wer, subs, dels, ins)
+            #allASR[a].append(utterance_in_session, speaker, asr, start_sec, end_sec, lesson, recordingID, a, names_count , wer, subs, dels, ins)
 
 
     # allASR = pd.DataFrame(allASR)
@@ -121,8 +124,9 @@ all_sess_df = pd.concat(all_sess)
 all_sess_df = all_sess_df[[
     'utterance_overall',
     'utterance_in_session',
-    'sessionID',
+    'recordingID',
     'lesson',
+    'period',
     'speaker',
     'transcript_type',
     'transcript',

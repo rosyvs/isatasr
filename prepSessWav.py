@@ -1,9 +1,14 @@
 from rosy_asr_utils import * 
 from pathlib import Path
 from pydub import AudioSegment
+import argparse
 import os 
 
-args_ctl =os.path.join('configs', 'deepSampleFull_tosess copy.txt')
+parser = argparse.ArgumentParser(description='Convert media to WAV and place in session directory for ASR')
+parser.add_argument('filelist', help='path to text file containing list of file paths to convert')
+parser.add_argument('outdir', default='./data/',help='directory to make session directories')
+args = parser.parse_args()
+
 # convert session audio to WAV and place in session directories
 
 # options
@@ -11,10 +16,10 @@ channels = 1
 sample_width = 2
 sample_rate = 48000
 bit_depth = 16
-sess_base_dir = './data/deepSampleFull/' # where to export session subdirectories
+sess_base_dir = args.outdir # where to export session subdirectories
 
 # args_ctl has list of paths to sessions to process
-with open(args_ctl) as ctl:
+with open(args.filelist) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
     sesslist = list(os.path.normpath(line) for line in sesslist if line)
 
