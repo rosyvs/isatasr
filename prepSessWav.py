@@ -26,10 +26,13 @@ with open(args.filelist) as ctl:
 for sess in sesslist: 
     print(f'sess: {sess}')
     sess = sess.strip()
-    sessname = Path(sess).stem
+    sessname = sessname.split('.')[0]
+
+    sessname=sessname.stem # remove extra extensions e.g. .mp4.mp4 that are present in some source media files
+
     sesspath = f'{sess_base_dir}/{sessname}/'
 
-    print(sessname)
+    print(f'...Extracted session name from media file: {sessname}')
     aud_type = Path(sess).suffix
     print(aud_type)
     if not os.path.exists(sesspath):
@@ -41,4 +44,5 @@ for sess in sesslist:
     new_audio = aud.set_channels(channels)
     new_audio = new_audio.set_frame_rate(sample_rate)
     new_audio.export(wav_path, format='wav')
+    print(f'...Made session directory and converted media to .WAV.')
 
