@@ -27,7 +27,8 @@ for sess in sesslist:
     print(f'sess: {sess}')
     sess = sess.strip()
 
-    sessname=sessname.stem # remove extra extensions e.g. .mp4.mp4 that are present in some source media files
+    sessname = Path(sess).stem
+    # remove extra extensions e.g. .mp4.mp4 that are present in some source media files
     sessname = sessname.split('.')[0]
 
     sesspath = f'{sess_base_dir}/{sessname}/'
