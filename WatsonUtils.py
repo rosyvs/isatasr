@@ -82,3 +82,4 @@ def JSONtoCSV(jsonpath, csvpath):
             confidence = result['alternatives'][0]['confidence']
             transcript = result['alternatives'][0]['transcript']
             csvwriter.writerow([start_time, end_time, transcript, confidence])
+

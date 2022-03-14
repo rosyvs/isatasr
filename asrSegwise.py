@@ -10,6 +10,7 @@ import pandas as pd
 import math
 from datetime import datetime
 import shutil
+import soundfile as sf
 from rosy_asr_utils import *
 
 
@@ -29,9 +30,9 @@ for sesspath in sesslist:
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
-    asrDir = os.path.join(sesspath,'asr_short_segwise')
+    asrDir = os.path.join(sesspath,'asr_segwise')
     # asrBlockDir = asrDir + '_reblocked' # segment-wise ASR will be concatenated to distinguish from ASR results run on entire block
-    asrFullDir = os.path.join(sesspath,'asr_short_full') # where full session asr will be stored
+    asrFullDir = os.path.join(sesspath,'asr_full') # where full session asr will be stored
     asrFullFile = os.path.join(asrFullDir,f"{sessname}.asr") # full session ASR results
     if os.path.exists(asrFullFile):
         open(asrFullFile, 'w').close() # clear file before appending

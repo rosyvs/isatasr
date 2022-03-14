@@ -10,7 +10,7 @@ import csv
 # assumes 1 segment = 1 utterance! 
 ctlfile = 'deepSample2'
 args_ctl =os.path.join('configs', f'{ctlfile}.txt')
-asrType = 'asr_watson_concat_segwise'
+asrType = 'asr_rev_concat_segwise'
 transcriptType = 'ELANtranscript_segwise'
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
 
@@ -42,6 +42,8 @@ with open(args_ctl) as ctl: # reads lines without empties
 
 
 all_sess_seg_wer = []
+all_sess_alignment = []
+
 for sesspath in sesslist: 
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
@@ -107,6 +109,9 @@ for sesspath in sesslist:
         aligned_segwise = pd.concat(aligned_segwise)
         aligned_segwise.to_csv(os.path.join(sesspath,f'alignment_segwise_{asrType}_VS_{transcriptType}_{sessname}.csv'), index=False)
 
+        # add session identifiers 
+        aligned_segwise['recordingID'] = sessname
+        all_sess_alignment.append(aligned_segwise)
         # make Df to store segmentwise metrics
         segwise_wer = pd.DataFrame(seg_data, columns = ['session','segment','speaker','speaker_type','asr_exists','asr_wordcount',' transcript_exists','transcript_wordcount',\
         'wer','mer','substitutions','deletions','insertions'])
@@ -178,5 +183,5 @@ with pd.ExcelWriter(f'results/sesswise_WER_bygroups_{ctlfile}_{asrType}_VS_{tran
         all_by_sessXcodec.to_excel(writer, sheet_name='by_sessXcodec')
         all_by_speakerXcodec.to_excel(writer, sheet_name='by_speakerXcodec')
         all_by_speakerTypeXcodec.to_excel(writer, sheet_name='by_speakerTypeXcodec')
-
-                        
+all_sess_alignment = pd.concat(all_sess_alignment)
+all_sess_alignment.to_csv(f'results/alignment_all_{asrType}_VS_{transcriptType}_{sessname}.csv')

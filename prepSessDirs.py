@@ -1,37 +1,52 @@
 from rosy_asr_utils import * 
 from pathlib import Path
 from pydub import AudioSegment
+import argparse
 import os 
-import shutil
 
-args_ctl =os.path.join('configs', 'sess2wav_5SGcodecs.txt')
-# take "loose" WAVs from a single dir and place in session directories
+parser = argparse.ArgumentParser(description='Convert media to WAV and place in session directory for ASR')
+parser.add_argument('filelist', help='path to text file containing list of file paths to convert')
+parser.add_argument('outdir', default='./data/',help='directory to make session directories')
+parser.add_argument('convert_to_wav', default = True)
+args = parser.parse_args()
 
+# convert session audio to WAV and place in session directories
 
-sess_base_dir = './data/comparison_codecs/' # where to export session subdirectories
+# WAV options
+channels = 1
+sample_width = 2
+sample_rate = 48000
+bit_depth = 16
+sess_base_dir = args.outdir # where to export session subdirectories
 
 # args_ctl has list of paths to sessions to process
-with open(args_ctl) as ctl:
+with open(args.filelist) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
     sesslist = list(os.path.normpath(line) for line in sesslist if line)
 
 for sess in sesslist: 
     print(f'sess: {sess}')
     sess = sess.strip()
+
     sessname = Path(sess).stem
+    # remove extra extensions e.g. .mp4.mp4 that are present in some source media files
+    sessname = sessname.split('.')[0]
+
     sesspath = f'{sess_base_dir}/{sessname}/'
 
-    print(sessname)
+    print(f'...Extracted session name from media file: {sessname}')
     aud_type = Path(sess).suffix
-    print(aud_type)
-    if not os.path.exists(sesspath):
-        os.makedirs(sesspath)
+    print(f'Input media type: {aud_type}')
+    os.makedirs(sesspath,exist_ok=True)
 
-    # aud = AudioSegment.from_file(sess)
-    wav_path = os.path.join(sesspath,f'{sessname}.wav')
+    if args.convert_to_wav:
+        aud = AudioSegment.from_file(sess)
+        wav_path = os.path.join(sesspath,f'{sessname}.wav')
 
-    # new_audio.export(wav_path, format='wav')
-
-    shutil.copyfile(sess, wav_path)
-
+        new_audio = aud.set_channels(channels)
+        new_audio = new_audio.set_frame_rate(sample_rate)
+        new_audio.export(wav_path, format='wav')
+        print(f'...Made session directory and converted media to .WAV.')
+    else: 
+        print(f'...Made session directory but did not convert media from {aud_type} to .WAV')
 
