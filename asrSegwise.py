@@ -11,17 +11,21 @@ import math
 from datetime import datetime
 import shutil
 import soundfile as sf
+from google.protobuf.json_format import MessageToJson, MessageToDict
+import json
 from rosy_asr_utils import *
 
 
+parser = argparse.ArgumentParser(description='Run ASR on segments')
+parser.add_argument('filelist', help='path to text file containing list of file paths to transcribe')
+parser.add_argument('method', nargs = '?',default='extra',help='Google ASR type: standard (video model), extra (video model + confidence, timing,alternatives), short (streaming),')
+args = parser.parse_args()
+
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json") 
-asr_srate = 16000 # sampling rate to use for ASR, will resampel the input audio if necessary
-method = 'standard' # 'short' optimized for single utterance, or standard - see https://cloud.google.com/speech-to-text/docs/best-practices 
+asr_srate = 16000 # sampling rate to use for ASR, will resample the input audio if necessary
 
-
-args_ctl =os.path.join('configs', 'deepSample2.txt') # list of session directories to run ASR on
 # ctl has list of paths to sessions to process
-with open(args_ctl) as ctl:
+with open(args.filelist) as ctl:
     sesslist = (line.rstrip() for line in ctl) 
     sesslist = list(line for line in sesslist if line)
 
@@ -30,9 +34,9 @@ for sesspath in sesslist:
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
-    asrDir = os.path.join(sesspath,'asr_segwise')
+    asrDir = os.path.join(sesspath,f'asr_{"short_" if args.method=="short" else "" }segwise')
     # asrBlockDir = asrDir + '_reblocked' # segment-wise ASR will be concatenated to distinguish from ASR results run on entire block
-    asrFullDir = os.path.join(sesspath,'asr_full') # where full session asr will be stored
+    asrFullDir = os.path.join(sesspath,f'asr_{"short_" if args.method=="short" else "" }full') # where full session asr will be stored
     asrFullFile = os.path.join(asrFullDir,f"{sessname}.asr") # full session ASR results
     if os.path.exists(asrFullFile):
         open(asrFullFile, 'w').close() # clear file before appending
@@ -44,25 +48,8 @@ for sesspath in sesslist:
         audio = audio.set_frame_rate(asr_srate)
         srate = asr_srate
  
-
-
-    # check if asr files already exist, if so, zip them up to make a backup then delete   
-    if not os.path.exists(asrDir):
-        os.makedirs(asrDir)
-    # if not os.path.exists(asrBlockDir):
-    #     os.makedirs(asrBlockDir)
-    if not os.path.exists(asrFullDir):
-        os.makedirs(asrFullDir)
-    # check if asr file already existed, and backup if so
-    if os.path.isfile(asrDir):
-        now = datetime.now()
-        datestr = now.strftime("%d-%m-%Y_%H%M%S")
-        zipfile = shutil.make_archive(base_name =os.path.join(asrDir,f'backup_{datestr}'), 
-        format='zip', 
-        root_dir = asrDir,
-        base_dir = asrDir)
-        print(f"ASR already existed. Backed the file up to {zipfile}") 
-        os.remove(asrfile)
+    os.makedirs(asrDir, exist_ok=True)
+    os.makedirs(asrFullDir, exist_ok=True)
 
     for line in open(blkmapFile):
         line = line.strip()
@@ -77,20 +64,28 @@ for sesspath in sesslist:
         # extract segment and send only this to ASR
         seg_audio = audio[segStart*1000:segEnd*1000]
 
-        # EXPERIMENT: normalise segment volume before passing to ASR
+        # normalise segment volume before passing to ASR
         seg_audio = effects.normalize(seg_audio)
-        #\EXPERIMENT
 
         # bytes = io.BytesIO()
         # audio.export(bytes)
-        bytes=seg_audio.raw_data
+        audio_bytes=seg_audio.raw_data
 
-        if method == 'short':
-            res = transcribe_short_bytestream(bytes, client, srate)
+        if args.method == 'short':
+            res = transcribe_short_bytestream(audio_bytes, client, srate)
 
-        else: # standard
-            res = transcribe_bytestream(bytes, client, srate)
-            
+        elif args.method == 'standard': # standard
+            res = transcribe_bytestream(audio_bytes, client, srate)
+
+        elif args.method == 'extra':
+            fullresult, res = transcribeExtra_bytestream(audio_bytes, client, srate)
+            result_json = MessageToDict(fullresult._pb)
+            jsonDir = os.path.join(sesspath,'JSON_segwise')
+            os.makedirs(jsonDir, exist_ok=True)
+            jsonFile = os.path.join(jsonDir, f"{sessname}_{s}.json")
+            with open(jsonFile, "w") as jf:
+                json.dump(result_json, jf, indent=4)
+
         # write segmentwise ASR result
         asrfile = os.path.join(asrDir, f"{sessname}_{s}.asr")
         with open(asrfile,'w') as outfile:
