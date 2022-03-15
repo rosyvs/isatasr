@@ -221,7 +221,9 @@ def transcribeExtra_bytestream(bytes, client,srate):
     return(response, best)
 
 def transcribe_short_bytestream(bytes, client,srate):
-    """Transcribe the given audio bytestream using Google cloud speech, optimized for short utterances"""
+    """Transcribe the given audio bytestream using Google cloud speech-to-text 
+    streaming recognize, optimized for short utterances"""
+    # see https://cloud.google.com/speech-to-text/docs/best-practices 
 
     #audio = speech.RecognitionAudio(content=bytes)
     stream = [bytes]
@@ -253,7 +255,9 @@ def transcribe_short_bytestream(bytes, client,srate):
     return('\n'.join(result))
     
 def transcribe_diarize_file_async(speech_uri, client):
-    """Transcribe the given audio file using Google cloud speech."""
+    """Transcribe the given audio file using Google cloud speech,
+    with diarization and utterance timings. For best results, run
+    on long-duration audio (e.g. >5mins)"""
 
     audio =speechB.RecognitionAudio(uri=speech_uri)
     config = speechB.RecognitionConfig(

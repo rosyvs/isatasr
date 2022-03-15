@@ -4,10 +4,10 @@ from pydub import AudioSegment
 import argparse
 import os 
 
-parser = argparse.ArgumentParser(description='Convert media to WAV and place in session directory for ASR')
+parser = argparse.ArgumentParser(description='Create session directory for ASR & copy media')
 parser.add_argument('filelist', help='path to text file containing list of file paths to convert')
 parser.add_argument('outdir', default='./data/',help='directory to make session directories')
-parser.add_argument('convert_to_wav', default = True)
+parser.add_argument('-w','--convert_to_wav', action='store_false', help='Convert to WAV? (default False)')
 args = parser.parse_args()
 
 # convert session audio to WAV and place in session directories

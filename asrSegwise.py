@@ -23,6 +23,8 @@ args = parser.parse_args()
 
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json") 
 asr_srate = 16000 # sampling rate to use for ASR, will resample the input audio if necessary
+asr_channels = 1 # n channels to use for ASR, will adjsut if necessary
+asr_sample_width = 2 # sample width to use for ASR, will adjust if necessary
 
 # ctl has list of paths to sessions to process
 with open(args.filelist) as ctl:
