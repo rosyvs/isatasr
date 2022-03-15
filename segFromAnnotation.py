@@ -42,7 +42,7 @@ for sesspath in sesslist:
             os.makedirs(segDir)
         segTranscriptDir = os.path.join(sesspath,'ELANtranscript_segwise')
         if not os.path.exists(segTranscriptDir):
-                os.makedirs(segTranscriptDir)
+            os.makedirs(segTranscriptDir)
 
     # load session audio
     sess_audio = AudioSegment.from_wav(os.path.join(sesspath, f'{sessname}.wav'))
