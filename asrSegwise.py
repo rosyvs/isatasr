@@ -1,28 +1,28 @@
-#!/usr/bin/env python3
-# asrBlks.py  <ctl file of session paths>
-from __future__ import absolute_import
-from pydub.audio_segment import AudioSegment, effects
 import os
-import io
-import re
-import argparse
-import pandas as pd
-import math
-from datetime import datetime
-import shutil
-import soundfile as sf
-from google.protobuf.json_format import MessageToJson, MessageToDict
 import json
+from google.protobuf.json_format import MessageToJson, MessageToDict
+from pathlib import Path
+from pydub import AudioSegment
 from rosy_asr_utils import *
+from pydub.audio_segment import AudioSegment, effects
+import argparse
 
 
 parser = argparse.ArgumentParser(description='Run ASR on segments')
 parser.add_argument('filelist', help='path to text file containing list of file paths to transcribe')
-parser.add_argument('method', nargs = '?',default='extra',help='Google ASR type: standard (video model), extra (video model + confidence, timing,alternatives), short (streaming),')
+parser.add_argument('-m','--method', default='extra',help='Google ASR type: standard (video model), \
+    extra (video model + confidence, timing,alternatives), short (streaming),')
 args = parser.parse_args()
 
+# # DEBUG 
+# import sys
+# parser = argparse.ArgumentParser(description='Run ASR on segments')
+# sys.argv = ['asrSegwise.py', './configs/EXAMPLE.txt']
+# args = parser.parse_args()
+# # \DEBUG
+
 client = speech.SpeechClient.from_service_account_file("isatasr-91d68f52de4d.json") 
-asr_srate = 16000 # sampling rate to use for ASR, will resample the input audio if necessary
+asr_srate = 48000 # sampling rate to use for ASR, will resample the input audio if necessary
 asr_channels = 1 # n channels to use for ASR, will adjsut if necessary
 asr_sample_width = 2 # sample width to use for ASR, will adjust if necessary
 
@@ -33,6 +33,8 @@ with open(args.filelist) as ctl:
 
 for sesspath in sesslist: 
     print(f'sesspath: {sesspath}')
+    print(f'Transcribing using Google with method "{args.method}"...')
+
     sesspath = sesspath.strip()
     sessname = os.path.basename(sesspath)
     wavfile = os.path.join(sesspath, f'{sessname}.wav')
@@ -44,12 +46,35 @@ for sesspath in sesslist:
         open(asrFullFile, 'w').close() # clear file before appending
     blkmapFile = os.path.join(sesspath,f'{sessname}.blk')
 
-    audio = AudioSegment.from_file(wavfile)
-    srate = audio.frame_rate
-    if not asr_srate == srate:
-        audio = audio.set_frame_rate(asr_srate)
-        srate = asr_srate
- 
+    # prefer wav if it exists, otherwise choose another audio file
+    if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
+        audiofile = os.path.join(sesspath, f'{sessname}.wav')   
+    else:
+        audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
+        if audiofiles:
+            if len(audiofiles) > 1: # choose one format to proceed with
+                for f in audiofiles:
+                    if f.split('.')[-1] in ['wav', 'WAV']:
+                        audiofile = os.path.join(sesspath, f)
+                        continue
+                    else:
+                        audiofile = os.path.join(sesspath, f)
+        else:
+            print('WARNING: no audio files found. Skipping...')
+            continue    
+    aud_type = Path(audiofile).suffix
+    print(f'Input media type: {aud_type}')
+
+    # load session audio
+    audio = AudioSegment.from_file(audiofile)
+    # sample_rate = sess_audio.frame_rate
+    # channels = sess_audio.channels
+
+    # # set sample rate and channels 
+    # sess_audio = sess_audio.set_frame_rate(vad_srate)
+    #     srate = asr_srate 
+    audio = audio.set_channels(asr_channels).set_sample_width(asr_sample_width).set_frame_rate(asr_srate)
+
     os.makedirs(asrDir, exist_ok=True)
     os.makedirs(asrFullDir, exist_ok=True)
 
@@ -72,15 +97,14 @@ for sesspath in sesslist:
         # bytes = io.BytesIO()
         # audio.export(bytes)
         audio_bytes=seg_audio.raw_data
-
         if args.method == 'short':
-            res = transcribe_short_bytestream(audio_bytes, client, srate)
+            res = transcribe_short_bytestream(audio_bytes, client, asr_srate)
 
         elif args.method == 'standard': # standard
-            res = transcribe_bytestream(audio_bytes, client, srate)
+            res = transcribe_bytestream(audio_bytes, client, asr_srate)
 
         elif args.method == 'extra':
-            fullresult, res = transcribeExtra_bytestream(audio_bytes, client, srate)
+            fullresult, res = transcribeExtra_bytestream(audio_bytes, client, asr_srate)
             result_json = MessageToDict(fullresult._pb)
             jsonDir = os.path.join(sesspath,'JSON_segwise')
             os.makedirs(jsonDir, exist_ok=True)

@@ -22,7 +22,7 @@ import webrtcvad
 #       |--segments
 #          |--{sessname}_{segment_no}.wav
 
-parser = argparse.ArgumentParser(description='Run ASR on segments')
+parser = argparse.ArgumentParser(description='Run VAD')
 parser.add_argument('filelist', help='path to text file containing list of file paths to run VAD on')
 parser.add_argument('-e','--export_seg_audio',action='store_true',help='export segmented & blocked audio? (default False)')
 parser.add_argument('-a','--agg', default=1,help='aggressiveness of VAD, 1 seems best')
@@ -34,6 +34,7 @@ args = parser.parse_args()
 
 # # DEBUG 
 # import sys
+# parser = argparse.ArgumentParser(description='Run ASR on segments')
 # sys.argv = ['VAD_TAD_block.py', './configs/EXAMPLE.txt']
 # args = parser.parse_args()
 # # \DEBUG
