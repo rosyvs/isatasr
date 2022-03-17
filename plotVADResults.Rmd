@@ -1,0 +1,66 @@
+---
+title: "plot VAD param performance"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Load/Install Packages
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+packages <- c('magrittr', 'data.table',  'ggplot2','tidyverse', 'dplyr','tidyr')
+ipak(packages)
+
+```
+
+Session-wise
+```{r}
+results <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/VAD/deepSample2/sesswise.csv') 
+results_avg <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/VAD/deepSample2/averaged_over_sess.csv') 
+
+ggplot(data=results,aes(x=frame_length, y = value)) +
+  geom_line(aes(group=split))+facet_wrap(~metric)+
+  geom_line(data=results_avg, aes(x=frame_dur_s, y = value, color="mean"))+
+  ggtitle('XVECTOR')
+
+
+
+```
+
+ECAPA
+```{r}
+results <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/speaker_verification/deepSample2_EvT_10s_realEnrollment/deepSample2_EvT_10s_realEnrollment_ecapa_results.csv') %>% 
+  pivot_longer(-c(frame_dur_s, split), names_to='metric', values_to = 'value') %>% filter(metric %in% c('accuracy','precision','recall','train_EER'))
+
+results_avg <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/speaker_verification/deepSample2_EvT_10s_realEnrollment/deepSample2_EvT_10s_realEnrollment_ecapa_results_by_group.csv')%>% 
+  pivot_longer(-c(frame_dur_s), names_to='metric', values_to = 'value') %>% filter(metric %in% c('accuracy','precision','recall','train_EER'))
+
+ggplot(data=results,aes(x=frame_dur_s, y = value)) +
+  geom_line(aes(group=split))+facet_wrap(~metric)+
+  geom_line(data=results_avg, aes(x=frame_dur_s, y = value, color="mean"))+
+  ggtitle('ECAPA')
+
+
+
+```
+
+
+```{r}
+results <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/speaker_verification/deepSample2_EvT_10s_realEnrollment/deepSample2_EvT_10s_realEnrollment_ecapa_results.csv')
+
+ggplot(results, aes(x=frame_dur_s, y = accuracy)) +geom_line()
+
+ggplot(results, aes(x=frame_dur_s, y = precision)) +geom_line()
+
+ggplot(results, aes(x=frame_dur_s, y = recall)) +geom_line()
+
+ggplot(results, aes(x=frame_dur_s, y = train_EER)) +geom_line()
+
+
+```
+
+Stats on the tests
