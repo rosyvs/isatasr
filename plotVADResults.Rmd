@@ -12,7 +12,7 @@ ipak <- function(pkg){
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
-packages <- c('magrittr', 'data.table',  'ggplot2','tidyverse', 'dplyr','tidyr')
+packages <- c('magrittr', 'data.table',  'ggplot2','tidyverse', 'dplyr','tidyr','lemon')
 ipak(packages)
 
 ```
@@ -21,13 +21,36 @@ Session-wise
 ```{r}
 results <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/VAD/deepSample2/sesswise.csv') 
 results_avg <- read_csv('/Users/roso8920/Dropbox (Emotive Computing)/iSAT/AudioPrepro/results/VAD/deepSample2/averaged_over_sess.csv') 
+results_avg$agg <- factor(results_avg$agg)
+results_avg$win_length <- factor(results_avg$win_length)
 
-ggplot(data=results,aes(x=frame_length, y = value)) +
-  geom_line(aes(group=split))+facet_wrap(~metric)+
-  geom_line(data=results_avg, aes(x=frame_dur_s, y = value, color="mean"))+
-  ggtitle('XVECTOR')
+# average by agg
+ggplot() +
+  # geom_line(aes(group=sessname))+
+  geom_line(data=results_avg, aes(x=frame_length, y = F1, color=agg, group=agg))+
+  facet_rep_grid(win_length~min_seg_dur)+
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('F1 By min dur & window length')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank())
+ggsave('./results/VAD/by_F1.png', width=6, height=6)
 
+ggplot() +
+  # geom_line(aes(group=sessname))+
+  geom_line(data=results_avg, aes(x=frame_length, y = precision_prop, color=agg, group=agg))+
+  facet_rep_grid(win_length~min_seg_dur,  labeller = labeller(min_seg_dur=label_both, win_length=label_both))+
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('Precision By min dur & window length')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank())
+ggsave('./results/VAD/by_precision.png', width=6, height=6)
 
+ggplot() +
+  # geom_line(aes(group=sessname))+
+  geom_line(data=results_avg, aes(x=frame_length, y = recall_prop, color=agg, group=agg))+
+  facet_rep_grid(win_length~min_seg_dur)+
+  scale_color_brewer(palette="Dark2")+
+  ggtitle('Recall By min dur & window length')+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank())
+ggsave('./results/VAD/by_recall.png', width=6, height=6)
 
 ```
 

@@ -12,10 +12,11 @@ ipak <- function(pkg){
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
-packages <- c('sjPlot', 'reshape2', 'magrittr', 'data.table', 'gridExtra', 'ggplot2','stringr','readxl','tidyverse', 'dplyr','tidyr','strex','tibble','chron','lubridate','anytime','hms','stringr')
+packages <- c('sjPlot', 'reshape2', 'magrittr', 'data.table', 'gridExtra', 'ggplot2','stringr','readxl','tidyverse', 'dplyr','tidyr','strex','tibble','chron','lubridate','anytime','hms','stringr','openxlsx')
 ipak(packages)
 
 ```
+
 
 Given the data catalog (https://docs.google.com/spreadsheets/d/1Xs5jM9yGRmRbrSxjrRFIUpzbfb-MdcGOi_FyJen6MXk)
 Generate random 5-minute samples under the following constraints
@@ -93,9 +94,9 @@ for (sheet in audio_sheets){
           }
           else{        # if enrollment is in middle, trim SG to largest uninterrupted interval
             i1= thisrow$Timestamp.of.Enrollment.Start- thisrow$Timestamp.of.Small.Group.Start
-            print(paste0(thisrow$Name.of.File,': i1 = ', i1))
+            #   print(paste0(thisrow$Name.of.File,': i1 = ', i1))
             i2= thisrow$Timestamp.of.Small.Group.End- thisrow$Timestamp.of.Enrollment.End
-            print(paste0(thisrow$Name.of.File,': i2 = ', i2))
+            # print(paste0(thisrow$Name.of.File,': i2 = ', i2))
             
             if (i1>i2 ){
               thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
@@ -178,6 +179,244 @@ ksamples %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-02-08.c
 
 
 
+```
+
+FUNCTIONS
+```{r}
+fix_missing_SG_timestamps<-function(df){
+  if( nrow(df) >1){
+    # if (class(df$Group.Start.Time)=='character'){df$Group.Start.Time <- as.POSIXlt(df$Group.Start.Time)}
+    # if (class(df$Group.End.Time)=='character'){df$Group.End.Time <- as.POSIXlt(df$Group.End.Time)}
+    
+    # the only way i could get the time format properly is to convert numeric->times->character->hms... ugh
+    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.numeric)
+    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), chron::times)
+        df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.character)
+            df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.hms)
+
+
+    
+    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.numeric)
+    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), chron::times)
+     df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.character)
+    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.hms)
+    
+    # some of the files do not yet have the small groups start/end time manually verified.
+    # fill in Timestamps of small group start/end using Group.Start.Time when missing the timestamp
+    df$Timestamp.of.Small.Group.Start[is.na(df$Timestamp.of.Small.Group.Start)] <- df$Group.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)]
+    df$Timestamp.of.Small.Group.End[is.na(df$Timestamp.of.Small.Group.End)] <- df$Group.End.Time[is.na(df$Timestamp.of.Small.Group.End)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.End)]
+    
+    # replace negative timestamps with 0 (this means smallgroup started before recording)
+    df$Timestamp.of.Small.Group.Start[df$Timestamp.of.Small.Group.Start <0] <- hms(0,0,0)
+    
+    # Drop rows which still don't have timestamps for both start and end of small groups
+    df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End))
+    df$Small.Group.Duration <- as_hms(df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start )
+  }
+  return(df)
+}
+
+#####
+remove_enrollment <- function(df){
+  # Remove enrollment from small group and adjust start/end time to longest uninterrupted SG duration
+  for (s in 1:nrow(df)){
+    thisrow =  df[s,]
+    if (!is.na(thisrow$'Timestamp.of.Enrollment.Start')){
+      if(thisrow$'Timestamp.of.Enrollment.Start'<thisrow$'Timestamp.of.Small.Group.End'){
+        if(thisrow$'Timestamp.of.Enrollment.End'> thisrow$'Timestamp.of.Small.Group.Start'){
+          print('Small-group contains enrollment')
+          # if enrollment overlaps SG start, trim start of SG
+          if (thisrow$'Timestamp.of.Enrollment.Start' < thisrow$'Timestamp.of.Small.Group.Start'){
+            print(' trimming small-group START to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+          }
+          # if enrollment overlaps SG end, trim end of SG
+          if (thisrow$'Timestamp.of.Enrollment.End' > thisrow$'Timestamp.of.Small.Group.End'){
+            print(' trimming small-group END to exclude enrollment')
+            thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+          }
+          else{        # if enrollment is in middle, trim SG to largest uninterrupted interval
+            i1= thisrow$Timestamp.of.Enrollment.Start- thisrow$Timestamp.of.Small.Group.Start
+            #   print(paste0(thisrow$Name.of.File,': i1 = ', i1))
+            i2= thisrow$Timestamp.of.Small.Group.End- thisrow$Timestamp.of.Enrollment.End
+            # print(paste0(thisrow$Name.of.File,': i2 = ', i2))
+            
+            if (i1>i2 ){
+              thisrow$Timestamp.of.Small.Group.End = thisrow$Timestamp.of.Enrollment.Start
+              print(paste0('taking SG from before enrollment - duration ',i1, 'sec'))
+            }else{
+              thisrow$Timestamp.of.Small.Group.Start = thisrow$Timestamp.of.Enrollment.End
+              print(paste0('taking SG from after enrollment - duration ', i2, 'sec'))
+            }
+            
+          }
+        }
+      }
+    }
+    thisrow$Small.Group.Duration <- thisrow$Timestamp.of.Small.Group.End-thisrow$Timestamp.of.Small.Group.Start 
+    df[s,] <- thisrow
+  }
+  return(df)
+}
+
+########
+sample_middle_third <- function(thisrow, opts.Duration = 300, opts.Nwin=5){
+  
+    if (hms(opts.Duration) > as_hms(thisrow$Small.Group.Duration)){
+      print(paste0('***WARNING*** insufficient audio for ' , thisrow$Name.of.File))
+      return(NULL)}else{
+  
+        for(k in 1:opts.Nwin){  
+    sample_start <- hms(round(as.duration(
+      runif(
+        1,
+        max(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration) - as_hms(opts.Duration)), thisrow$Timestamp.of.Small.Group.Start),
+        min(as_hms(thisrow$Timestamp.of.Small.Group.Start+ as_hms(0.5*thisrow$Small.Group.Duration)), as_hms(thisrow$Timestamp.of.Small.Group.End-as_hms(opts.Duration)) ))
+    )))
+    
+        thisrow$sample_start<- as_hms(sample_start )
+      thisrow$sample_end<- as_hms(sample_start+ hms(opts.Duration))
+        thisrow <- thisrow%>% rename(!!paste0('sample_start_',k) := 'sample_start')
+  thisrow <- thisrow%>% rename(!!paste0('sample_end_',k) := 'sample_end')
+        }
+  return(thisrow)
+      }
+}
+```
+
+
+
+# Wide Sample March 2022
+Random sample 1 video per student across all teachers 
+Use audio only if no group video available for that student
+1 video can represent 2-4 students - we don't want them appearing multiple times
+As before, draw 5 random windows from small group for each video
+repeat algorithm x2-3
+```{r}
+opts.Niter = 3 # repeats of sampling algorithm
+opts.Nwin = 5 # how many random sample times per selected video
+opts.Duration = 300 # seconds, duration of small group
+catalog_file <- '../Data File Catalog_2022-03-17.xlsx'
+
+sheets <- excel_sheets(catalog_file)
+audio_sheets <- sheets %>% str_subset(pattern = " A") %>% str_subset(pattern = "Heading", negate = T) 
+video_sheets <- sheets %>% str_subset(pattern = " V - Group") %>% str_subset(pattern = "Heading", negate = T) 
+
+students <- read_xlsx(catalog_file, 'WIP Consents WRecordings') %>% 
+  select(-contains('...')) %>% 
+  pivot_longer(contains('Consent'), names_to='consent_type', values_to='consented') %>% 
+  filter(!grepl('Assess',consent_type)) %>% filter(consented=='YES') %>% 
+  mutate(consented=consented=='YES') %>% 
+  pivot_wider(names_from = consent_type, values_from=consented, values_fill=F) %>% 
+  mutate(video_consent=`Student Consent Video` & `Parent Consent Video`, audio_consent=`Student Consent Audio` & `Parent Consent Audio`) %>% 
+  filter(video_consent|audio_consent) %>% 
+  mutate(`Student ID` = sprintf("%03d",as.integer(`Student ID`))) %>% 
+  filter(!grepl(  'NA',`Student ID`)) 
+
+names(students) <- make.names(names(students))
+
+student_list = students$Student.ID
+student_remaining = student_list
+teacher_list = unique(students$Teacher)
+
+for (k in 1:opts.Niter){
+  widesample <- list()
+  count=0
+  for (t in 1:length(teacher_list)){
+    teacher = teacher_list[t]
+    print(paste('----Teacher:',teacher))
+    class_students = students %>% filter(Teacher == teacher)
+    # read audio and video df
+    asheet <- audio_sheets[grepl(teacher,audio_sheets)]
+    vsheet <- video_sheets[grepl(teacher,video_sheets)]
+    has_A <- length(asheet)>0
+    has_V <- length(vsheet)>0
+    if(length(vsheet)>1){vsheet=vsheet[-1]}
+    if(length(asheet)>1){asheet=asheet[-1]}
+    if (has_V){
+      video <- read.xlsx(catalog_file, sheet=vsheet, detectDates=T,na.strings = "NA")
+      # video[video=='NA'] <- NA
+      names(video) <- make.names(names(video))
+      video <- video %>% rename_at(vars(grep("Useable",names(.))), ~'useable')
+      video <- video %>% filter(useable==1)
+      # filter out any rows without consent for all students
+      video <- video %>%  mutate(listStudentID = str_split(Student.IDs, boundary('word')))
+      video <-  video %>% mutate(all_consented = all(unlist(listStudentID) %in% c(student_list, 'NA')))
+      video <- video %>% filter(all_consented) %>% filter(!listStudentID=='NA')
+      
+      # repair timestamps & filter to those with SG timestamps
+      video <- fix_missing_SG_timestamps(video)
+      if(nrow(video)==0){has_V=F}
+      
+    }
+    if (has_A){
+      audio <- read.xlsx(catalog_file, sheet=asheet,detectDates=T,na.strings = "NA")
+      names(audio) <- make.names(names(audio))
+      audio <- audio %>% rename_at(vars(grep("Useable",names(.))), ~'useable')
+      audio <- audio %>% filter(useable==1 & !is.na(Student.IDs))
+      # filter out any rows without consent for all students
+      audio <- audio %>%  mutate(listStudentID = str_split(Student.IDs, boundary('word')))
+      audio <-  audio %>% mutate(all_consented = all(unlist(listStudentID) %in% c(student_list, 'NA')))
+      audio <- audio %>% filter(all_consented) %>% filter(!listStudentID=='NA')
+      
+      # repair timestamps & filter to those with SG timestamps
+      audio <- fix_missing_SG_timestamps(audio)
+      if(nrow(audio)==0){has_A=F}
+    }
+    if(!has_A & !has_V){print(paste0('!! No usable (consented, timestamped) media for teacher ', teacher))
+      next}
+    
+    for (s in 1:nrow(class_students)){ # loop over students in this class
+      
+      # check if student has already appeared in a selected video
+      studentID <- class_students$Student.ID[s]
+      
+      if (!studentID %in% student_list){
+        print(paste0('Student already appeared in a selected video: ', studentID))
+        next}
+      
+      # check whether to use video or audio
+      if (has_V & class_students$video_consent[s]){media <- video }else if(has_A & class_students$audio_consent[s]){media<-audio}else{print(paste('no consented media for Student ',s)) 
+        next}
+      
+      # choose a media file in which the student appears
+            media <- media %>% filter(grepl( studentID,listStudentID))
+
+      if (nrow(media)==0){print(paste('no consented media for Student',studentID)) ;
+        next}
+      print(paste0(nrow(media), ' media files found for Student ',studentID))
+      
+      # exclude enrollment from widesample
+      media <- remove_enrollment(media)
+      
+      # check for sufficient audio
+      media <- media %>% filter(Small.Group.Duration >= hms(opts.Duration) )
+       if (nrow(media)==0){print(paste('no consented media for Student',studentID)) ;
+        next}
+      # choose a file for this student
+      thisrow <- media[sample(nrow(media),1), ]
+      
+      # draw samples from within the small group middle third
+     thisrow <- sample_middle_third(thisrow, opts.Duration, opts.Nwin)
+      
+      # remove students in selected media from list
+     student_remaining <- setdiff(student_remaining, unlist(thisrow$listStudentID))
+     
+     # select consistent variables 
+     thisrow <- thisrow %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, Student.IDs, contains('sample_')))
+     
+     # add row
+     count=count+1
+     widesample[[count]] <- thisrow
+    
+      rm(media)  
+    }# student
+    rm(audio,video)
+  }# teacher
+    widesample <- bind_rows(widesample) %>% data.frame()
+widesample %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-03-17_',k,'.csv'))
+
+} #k
 ```
 
 FOCUSSED SAMPLE v1
