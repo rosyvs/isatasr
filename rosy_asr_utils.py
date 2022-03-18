@@ -13,8 +13,7 @@ from decimal import InvalidOperation
 from pydub import AudioSegment
 from google.cloud import speech
 from google.cloud import speech_v1p1beta1 as speechB # need the beta for diarizaiton
-from google.cloud import speech_v1 as speech1 # need the beta for diarizaiton
-
+from google.cloud import speech_v1 as speech1 # need this version for confidence
 from google.cloud import storage
 
 
@@ -192,7 +191,7 @@ def transcribe_bytestream(bytes, client,srate):
 
 def transcribeExtra_bytestream(bytes, client,srate):
     """Transcribe the given audio bytestream using Google cloud speech, returning full output 
-    including confidence, diarization, alternatives"""
+    including confidence, timing, diarization, alternatives"""
 
     audio = speech1.RecognitionAudio(content=bytes)
     config = speech1.RecognitionConfig(
