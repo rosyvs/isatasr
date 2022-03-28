@@ -8,7 +8,7 @@ import csv
 # ASR and ref transcripts at the segment level & corresponding segment numbers
 # summarise WER by speaker: requires labelled utterances in utt_labels{sessname}.csv
 # assumes 1 segment = 1 utterance! 
-ctlfile = 'deepSample2'
+ctlfile = 'EXAMPLE'
 args_ctl =os.path.join('configs', f'{ctlfile}.txt')
 asrType = 'asr_segwise'
 transcriptType = 'ELANtranscript_segwise'
@@ -186,4 +186,4 @@ with pd.ExcelWriter(f'results/sesswise_WER_bygroups_{ctlfile}_{asrType}_VS_{tran
         all_by_speakerXcodec.to_excel(writer, sheet_name='by_speakerXcodec')
         all_by_speakerTypeXcodec.to_excel(writer, sheet_name='by_speakerTypeXcodec')
 all_sess_alignment = pd.concat(all_sess_alignment)
-all_sess_alignment.to_csv(f'results/alignment_all_{asrType}_VS_{transcriptType}_{sessname}.csv')
+all_sess_alignment.to_csv(f'results/alignment_all_{ctlfile}_{asrType}_VS_{transcriptType}.csv')
