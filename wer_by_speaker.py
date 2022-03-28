@@ -10,7 +10,7 @@ import csv
 # assumes 1 segment = 1 utterance! 
 ctlfile = 'deepSample2'
 args_ctl =os.path.join('configs', f'{ctlfile}.txt')
-asrType = 'asr_rev_concat_segwise'
+asrType = 'asr_segwise'
 transcriptType = 'ELANtranscript_segwise'
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
 
@@ -165,6 +165,7 @@ if by_codec:
     all_by_speakerXcodec = all_sess_seg_wer.groupby(['speaker','codec'],sort=False,as_index=False).apply(wer_df_summary).reset_index()
     all_by_speakerTypeXcodec = all_sess_seg_wer.groupby(['speaker_type','codec'],sort=False,as_index=False).apply(wer_df_summary).reset_index()
 
+all_overall = wer_df_summary(all_sess_seg_wer)
 all_by_sess = all_sess_seg_wer.groupby('session',sort=False,as_index=False).apply(wer_df_summary).reset_index()
 all_by_speaker = all_sess_seg_wer.groupby('speaker',sort=False,as_index=False).apply(wer_df_summary).reset_index()
 all_by_speakerType = all_sess_seg_wer.groupby('speaker_type',sort=False,as_index=False).apply(wer_df_summary).reset_index()
@@ -173,6 +174,7 @@ all_by_sessXspeakerType = all_sess_seg_wer.groupby(['session','speaker_type'],so
 #pd.concat(all_sess_seg_wer).to_csv( f'results/sesswise_wer_{verstr}.csv',index=False, float_format='%.3f') 
 with pd.ExcelWriter(f'results/sesswise_WER_bygroups_{ctlfile}_{asrType}_VS_{transcriptType}.xlsx',engine='xlsxwriter',
                         engine_kwargs={'options': {'strings_to_numbers': True}}) as writer:
+    all_overall.to_excel(writer, sheet_name='overall')
     all_by_sess.to_excel(writer, sheet_name='by_session')
     all_by_speaker.to_excel(writer, sheet_name='by_speaker')
     all_by_speakerType.to_excel(writer, sheet_name='by_speakerType')
