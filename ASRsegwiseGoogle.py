@@ -22,7 +22,7 @@ def GoogleASRSegwise(filelist, method, clientfile):
 
     for sesspath in sesslist: 
         print(f'sesspath: {sesspath}')
-        print(f'Transcribing using Google with method "{method}"...')
+        print(f'...Transcribing using Google with method "{method}"...')
 
         sesspath = sesspath.strip()
         sessname = os.path.basename(sesspath)
@@ -34,24 +34,36 @@ def GoogleASRSegwise(filelist, method, clientfile):
             open(asrFullFile, 'w').close() # clear file before appending
         blkmapFile = os.path.join(sesspath,f'{sessname}.blk')
 
-        # prefer wav if it exists, otherwise choose another audio file
-        if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
-            audiofile = os.path.join(sesspath, f'{sessname}.wav')   
-        else:
-            audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
-            if audiofiles:
-                if len(audiofiles) > 1: # choose one format to proceed with
-                    for f in audiofiles:
-                        if f.split('.')[-1] in ['wav', 'WAV']:
-                            audiofile = os.path.join(sesspath, f)
-                            continue
-                        else:
-                            audiofile = os.path.join(sesspath, f)
+        USE_LINKED_MEDIA = True
+        # check for linked media first, then for audio files
+        if os.path.exists(os.path.join(sesspath, 'LINKED_MEDIA.txt')   ):
+            with open(os.path.join(sesspath, 'LINKED_MEDIA.txt')) as lf:
+                audiofile = lf.read()
+            if os.path.exists(audiofile):
+                print(f'...Linked media found: {audiofile}')
             else:
-                print('WARNING: no audio files found. Skipping...')
-                continue    
+                print(f'...Linked media not found! Will look for media in session directory...')
+                USE_LINKED_MEDIA = False
+
+        if not USE_LINKED_MEDIA:
+            # prefer wav if it exists, otherwise choose another audio file
+            if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
+                audiofile = os.path.join(sesspath, f'{sessname}.wav')   
+            else:
+                audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
+                if audiofiles:
+                    if len(audiofiles) > 1: # choose one format to proceed with
+                        for f in audiofiles:
+                            if f.split('.')[-1] in ['wav', 'WAV']:
+                                audiofile = os.path.join(sesspath, f)
+                                continue
+                            else:
+                                audiofile = os.path.join(sesspath, f)
+                else:
+                    print('!!!WARNING: no audio files found. Skipping...')
+                    continue    
         aud_type = Path(audiofile).suffix
-        print(f'Input media type: {aud_type}')
+        print(f'...Input media type: {aud_type}')
 
         # load session audio
         audio = AudioSegment.from_file(audiofile)
@@ -74,7 +86,7 @@ def GoogleASRSegwise(filelist, method, clientfile):
             s = int(s)
             segStart = float(segStart)
             segEnd= float(segEnd)
-            print(f'Processing segment: {s}')
+            print(f'...Processing segment: {s}')
 
             # extract segment and send only this to ASR
             seg_audio = audio[segStart*1000:segEnd*1000]
@@ -118,7 +130,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run ASR on segments')
     parser.add_argument('filelist', nargs='?', default='./configs/EXAMPLE.txt', help='path to text file containing list of file paths to transcribe')
     parser.add_argument('-m','--method', default='extra',help='Google ASR type: standard (video model), \
-        extra (video model + confidence, timing,alternatives), short (streaming)')
+        extra (video model + confidence, timing, alternatives), short (streaming)')
     parser.add_argument('-c','--clientfile', nargs='?', default = "isatasr-91d68f52de4d.json", help='path to JSON service account file for Google Cloud services')
     args = parser.parse_args()
 

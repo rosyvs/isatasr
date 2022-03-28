@@ -54,22 +54,34 @@ def segFromVAD(filelist,
             os.makedirs(segDir, exist_ok=True)
             os.makedirs(blkDir, exist_ok=True)
         
-        # prefer wav if it exists, otherwise choose another audio file
-        if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
-            audiofile = os.path.join(sesspath, f'{sessname}.wav')   
-        else:
-            audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
-            if audiofiles:
-                if len(audiofiles) > 1: # choose one format to proceed with
-                    for f in audiofiles:
-                        if f.split('.')[-1] in ['wav', 'WAV']:
-                            audiofile = os.path.join(sesspath, f)
-                            continue
-                        else:
-                            audiofile = os.path.join(sesspath, f)
+        USE_LINKED_MEDIA = True
+        # check for linked media first, then for audio files
+        if os.path.exists(os.path.join(sesspath, 'LINKED_MEDIA.txt')   ):
+            with open(os.path.join(sesspath, 'LINKED_MEDIA.txt')) as lf:
+                audiofile = lf.read()
+            if os.path.exists(audiofile):
+                print(f'...Linked media found: {audiofile}')
             else:
-                print('WARNING: no audio files found. Skipping...')
-                continue    
+                print(f'...Linked media not found! Will look for media in session directory...')
+                USE_LINKED_MEDIA = False
+
+        if not USE_LINKED_MEDIA:
+            # prefer wav if it exists, otherwise choose another audio file
+            if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
+                audiofile = os.path.join(sesspath, f'{sessname}.wav')   
+            else:
+                audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
+                if audiofiles:
+                    if len(audiofiles) > 1: # choose one format to proceed with
+                        for f in audiofiles:
+                            if f.split('.')[-1] in ['wav', 'WAV']:
+                                audiofile = os.path.join(sesspath, f)
+                                continue
+                            else:
+                                audiofile = os.path.join(sesspath, f)
+                else:
+                    print('!!!WARNING: no audio files found. Skipping...')
+                    continue    
         aud_type = Path(audiofile).suffix
         print(f'Input media type: {aud_type}')
 
@@ -188,7 +200,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run VAD')
     parser.add_argument('filelist',nargs='?', default='./configs/EXAMPLE.txt', help='path to text file containing list of file paths to run VAD on')
     parser.add_argument('-e','--export_seg_audio',action='store_true',help='export segmented & blocked audio? (default False)')
-    parser.add_argument('-a','--agg', default=0,help='aggressiveness of VAD (0-3)')
+    parser.add_argument('-a','--agg', default=1,help='aggressiveness of VAD (0-3)')
     parser.add_argument('-l','--frame_length', default=20,help='frame length sent to VAD')
     parser.add_argument('-w','--win_length', default=300,help='window size (ms) for VAD buffer')
     parser.add_argument('-m','--min_seg_dur', default=1000,help='ms. minimum segment duration')
