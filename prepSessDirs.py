@@ -8,10 +8,7 @@ import shutil
 
 
 def prepSessDirs(filelist, outdir, link_media, convert_to_wav):
-    """convert session audio to WAV and place in session directories"""
-
-
-
+    """Create session directories"""
     # WAV options
     CHANNELS = 1
     SAMPLE_RATE = 48000
@@ -40,11 +37,9 @@ def prepSessDirs(filelist, outdir, link_media, convert_to_wav):
         os.makedirs(sesspath,exist_ok=True)
 
         if link_media:
-            pass #TODO
             with open(os.path.join(sesspath,'LINKED_MEDIA.txt'),'w') as linkfile:
                 linkfile.write(media_path)
             print(f'...Made a link to media in LINKED_MEDIA.txt')
-
 
         else:
             if convert_to_wav:
