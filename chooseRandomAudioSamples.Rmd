@@ -293,10 +293,10 @@ Use audio only if no group video available for that student
 As before, draw 5 random windows from small group for each video
 repeat algorithm x2-3
 ```{r wideSample2}
-opts.Niter = 3 # repeats of sampling algorithm
+opts.Niter = 1 # repeats of sampling algorithm
 opts.Nwin = 5 # how many random sample times per selected video
 opts.Duration = 300 # seconds, duration of small group
-catalog_file <- '../Data File Catalog_2022-04-01.xlsx'
+catalog_file <- '../Data File Catalog_2022-04-22.xlsx'
 
 # set column names to use for media sheets
 mediacols <- c(  "Teacher" ,"Period" , "Lesson.#",  "Name.of.File" , "URL.to.File" , 'Equipment.Used', "Record.Start.Time" ,"Group.Start.Time","Group.End.Time", "Timestamp.of.Small.Group.Start", "Timestamp.of.Small.Group.End"  , "Timestamp.of.Enrollment.Start" ,"Timestamp.of.Enrollment.End" , "Student.IDs"  , "Useable.(0=no,.1=yes)")
@@ -431,7 +431,8 @@ for (k in 1:opts.Niter){
         next}
       
       # filter to include only Yeti if available
-      media_yeti <- media %>% filter(grepl('yeti|Yeti', Equipment.Used))
+      media <- media %>% mutate(is_yeti = grepl('yeti|Yeti', Equipment.Used))
+      media_yeti <- media %>% filter(is_yeti)
       print(paste('n with Yeti',nrow(media_yeti), 'out of',nrow(media)))
       if (nrow(media_yeti) >0 ){media <- media_yeti}
       
@@ -445,7 +446,7 @@ for (k in 1:opts.Niter){
       student_remaining <- setdiff(student_remaining, unlist(thisrow$listStudentID))
       
       # select consistent variables 
-      thisrow <- thisrow %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, Student.IDs, contains('sample_'))) %>% rename(Lesson = Lesson..)
+      thisrow <- thisrow %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, Student.IDs, is_yeti, contains('sample_'))) %>% rename(Lesson = Lesson..)
       
       # force classes
       thisrow$Period <- as.character(thisrow$Period)
@@ -460,7 +461,7 @@ for (k in 1:opts.Niter){
     rm(audio,video)
   }# teacher
   widesample <- bind_rows(widesample) %>% data.frame()
-  widesample %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-03-20_',k,'.csv'))
+  widesample %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-04-22_',k,'.csv'))
   n_students_wide[k] <- length(student_list)-length(student_remaining)
 
 } #k
