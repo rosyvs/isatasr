@@ -49,12 +49,16 @@ def ASRsegwiseGoogle(filelist, method, clientfile):
             else:
                 print(f'...Linked media not found! Will look for media in session directory...')
                 USE_LINKED_MEDIA = False
+        else:
+            USE_LINKED_MEDIA = False
 
         if not USE_LINKED_MEDIA:
             # prefer wav if it exists, otherwise choose another audio file
+            print('...looking for local audio files, prefer .wav if it exists')
             if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
                 audiofile = os.path.join(sesspath, f'{sessname}.wav')   
             else:
+                print('...no .wav found, checking for other audio files...')
                 audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
                 if audiofiles:
                     if len(audiofiles) > 1: # choose one format to proceed with
@@ -64,11 +68,14 @@ def ASRsegwiseGoogle(filelist, method, clientfile):
                                 continue
                             else:
                                 audiofile = os.path.join(sesspath, f)
+                                print(audiofile)
+                    else:
+                        audiofile = os.path.join(sesspath, audiofiles[0])
                 else:
                     print('!!!WARNING: no audio files found. Skipping...')
                     continue    
         aud_type = Path(audiofile).suffix
-        print(f'...Input media type: {aud_type}')
+        print(f'...Chose audio file of type: {aud_type}')
 
         # load session audio
         audio = AudioSegment.from_file(audiofile)
@@ -139,6 +146,6 @@ if __name__ == "__main__":
     parser.add_argument('-c','--clientfile', nargs='?', default = "isatasr-91d68f52de4d.json", help='path to JSON service account file for Google Cloud services')
     args = parser.parse_args()
 
-    GoogleASRSegwise(filelist = args.filelist, 
+    ASRsegwiseGoogle(filelist = args.filelist, 
     method=args.method,
     clientfile=args.clientfile)
