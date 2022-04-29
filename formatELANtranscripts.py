@@ -81,4 +81,4 @@ for ELANfile in os.listdir(ELANdir):
 
 
     labels= pd.DataFrame(labels, columns = ('speaker', 'utterance', 'start_sec','end_sec'))
-    labels.to_csv(labelFile,index=False)
+    labels.to_csv(labelFile,index=False, float_format='%.3f')
