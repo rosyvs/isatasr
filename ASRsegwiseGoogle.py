@@ -11,9 +11,9 @@ import argparse
 # 1. prepSessDirs
 # 2. VAD_TAD_block (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
 # 3. ASRsegwiseGoogle (or REV, Watson)
-# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
+# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)pytho
 
-def GoogleASRSegwise(filelist, method, clientfile):
+def ASRsegwiseGoogle(filelist, method, clientfile):
 
     ASR_SRATE = 16000 # sampling rate to use for ASR, will resample the input audio if necessary
     ASR_CHANNELS = 1 # n channels to use for ASR, will adjsut if necessary
