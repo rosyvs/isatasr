@@ -7,6 +7,11 @@ from rosy_asr_utils import *
 from pydub.audio_segment import AudioSegment, effects
 import argparse
 
+# ASR pipeline
+# 1. prepSessDirs
+# 2. VAD_TAD_block (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
+# 3. ASRsegwiseGoogle (or REV, Watson)
+# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
 
 def GoogleASRSegwise(filelist, method, clientfile):
 

@@ -4,6 +4,12 @@ import jiwer
 from rosy_asr_utils import *
 import csv
 
+# ASR pipeline
+# 1. prepSessDirs
+# 2. VAD_TAD_block (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
+# 3. ASRsegwiseGoogle (or REV, Watson)
+# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
+
 # loop over sessions in control file and compute WER for any with both 
 # ASR and ref transcripts at the segment level & corresponding segment numbers
 # summarise WER by speaker: requires labelled utterances in utt_labels{sessname}.csv

@@ -6,6 +6,12 @@ import os
 import argparse
 import webrtcvad
 
+# ASR pipeline
+# 1. prepSessDirs
+# 2. VAD_TAD_block (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
+# 3. ASRsegwiseGoogle (or REV, Watson)
+# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
+
 # Takes .wav audio from session directories with relative path <sesspath> specifed in control file
 # - uses VAD to segment audio into utterances
 # - concatenates utterances to blocks of maximum duration blksecs (1 minute suggested as 

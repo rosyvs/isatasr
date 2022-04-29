@@ -8,9 +8,9 @@ from rosy_asr_utils import *
 
 # Process ELAN transcript .tsv files: reduce and save in correct session directories
 ELANdir = os.path.expanduser(os.path.normpath(
-    '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/transcripts_unsorted/Crystal-deepSample2-ELAN/Anonymized/')) # input
+    '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/cardioid/ELAN/')) # input
 baseSessDir = os.path.normpath(os.path.expanduser(
-    '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/deepSample2/')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
+    '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/cardioid/')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
 make_sorted_copy = True # ELAN outputs transcripts sorted by speaker not timestamp, save a sorted copy of ELAN transcript? 
 
 
