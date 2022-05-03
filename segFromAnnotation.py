@@ -3,6 +3,12 @@
 # each utterance becomes a segment
 # segments are blocked to ~1min blocks for comparability to VAD/ sending to REV
 
+# ASR pipeline
+# 1. prepSessDirs
+# 2. VAD_segmenter / TAD_segmenter (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
+# 3. ASRsegwiseGoogle (or REV, Watson)
+# 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
+
 from pydub import AudioSegment
 import os
 import re
@@ -19,7 +25,7 @@ export_segment_audio = True
 blksecs = 59 # Google has refused some blocks if exactly 60 seconds 
 
 
-args_ctl =os.path.join('configs', 'deepSample2.txt') # list of session directories to extract segments from
+args_ctl =os.path.join('configs', 'CARDIOID.txt') # list of session directories to extract segments from
 label_fname_pattern = 'utt_labels_{sessname}.csv' # relative to session directory
 
 

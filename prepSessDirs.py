@@ -7,10 +7,9 @@ import shutil
 
 # ASR pipeline
 # 1. prepSessDirs
-# 2. VAD_TAD_block (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
+# 2. VAD_segmenter / TAD_segmenter (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
 # 3. ASRsegwiseGoogle (or REV, Watson)
 # 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
-
 
 def prepSessDirs(filelist, outdir, link_media, convert_to_wav):
     """Create session directories"""
