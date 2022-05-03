@@ -29,19 +29,19 @@ import webrtcvad
 #          |--{sessname}_{segment_no}.wav       
 
 def segFromVAD(filelist,
-        export_seg_audio,
         agg,
         frame_length,
         win_length,
         min_seg_dur,
-        file_suffix):
+        export_seg_audio=False,
+        file_suffix=''):
     # segmentation options
-    blksecs = 59 # Max Duration to block segments into. Note: Google ASR has refused some blocks if exactly 60 seconds 
-    split_overlap = 1 # for long segments which require cutting, overlap by this duration in seconds to avoid word splitting
+    BLKSECS = 59 # Max Duration to block segments into. Note: Google ASR has refused some blocks if exactly 60 seconds 
+    SPLIT_OVERLAP = 1 # for long segments which require cutting, overlap by this duration in seconds to avoid word splitting
     # .wav audio output options:
-    sample_width = 2 # bytes per sample, should usually be 2
-    sample_rate = 48000 # for webrtcvad needs an srate of 8/16/32/48kHz
-    channels = 1 # for webrtcvad needs to be mono
+    SAMPLE_WIDTH = 2 # bytes per sample, should usually be 2
+    SAMPLE_RATE = 16000 # for webrtcvad needs an srate of 8/16/32/48kHz
+    CHANNELS = 1 # for webrtcvad needs to be mono
 
     with open(filelist) as ctl:
         sesslist = (line.rstrip() for line in ctl) 
@@ -51,61 +51,35 @@ def segFromVAD(filelist,
         print(f'sesspath: {sesspath}')
         sesspath = sesspath.strip()
         sessname = os.path.basename(sesspath)
-        blkmapFile = os.path.join(sesspath, f'{sessname}.blk')
+        blkmapFile = os.path.join(sesspath, f'VAD_{sessname}.blk')
 
         if export_seg_audio: 
             print('Exporting segmented audio...')
-            segDir = os.path.join(sesspath, f'segments{file_suffix}')
-            blkDir = os.path.join(sesspath, f'blocks{file_suffix}')
+            segDir = os.path.join(sesspath, f'VADsegments{file_suffix}')
+            blkDir = os.path.join(sesspath, f'VADblocks{file_suffix}')
             os.makedirs(segDir, exist_ok=True)
             os.makedirs(blkDir, exist_ok=True)
-        
-        USE_LINKED_MEDIA = True
-        # check for linked media first, then for audio files
-        if os.path.exists(os.path.join(sesspath, 'LINKED_MEDIA.txt')   ):
-            with open(os.path.join(sesspath, 'LINKED_MEDIA.txt')) as lf:
-                audiofile = lf.read()
-            if os.path.exists(audiofile):
-                print(f'...Linked media found: {audiofile}')
-            else:
-                print(f'...Linked media not found! Will look for media in session directory...')
-                USE_LINKED_MEDIA = False
 
-        if not USE_LINKED_MEDIA:
-            # prefer wav if it exists, otherwise choose another audio file
-            if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
-                audiofile = os.path.join(sesspath, f'{sessname}.wav')   
-            else:
-                audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
-                if audiofiles:
-                    if len(audiofiles) > 1: # choose one format to proceed with
-                        for f in audiofiles:
-                            if f.split('.')[-1] in ['wav', 'WAV']:
-                                audiofile = os.path.join(sesspath, f)
-                                continue
-                            else:
-                                audiofile = os.path.join(sesspath, f)
-                else:
-                    print('!!!WARNING: no audio files found. Skipping...')
-                    continue    
-        aud_type = Path(audiofile).suffix
-        print(f'Input media type: {aud_type}')
+        audiofile = get_sess_audio(sesspath)
+        if not audiofile:
+            print('!!! No audio file found! Skipping...')
+            continue
+        else:
+            aud_type = Path(audiofile).suffix
+            print(f'Input media type: {aud_type}')
+
 
         # load session audio
         sess_audio = AudioSegment.from_file(audiofile)
-        # sample_rate = sess_audio.frame_rate
-        # channels = sess_audio.channels
 
         # # set sample rate and channels 
-        # sess_audio = sess_audio.set_frame_rate(vad_srate)
-        #     srate = asr_srate 
-        sess_audio = sess_audio.set_channels(channels).set_sample_width(sample_width).set_frame_rate(sample_rate)
+        sess_audio = sess_audio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
 
         # initialise VAD
         vad = webrtcvad.Vad(int(agg))
-        frames = frame_generator(frame_length, sess_audio.raw_data, sample_rate)
+        frames = frame_generator(frame_length, sess_audio.raw_data, SAMPLE_RATE)
         frames = list(frames)
-        segment_generator = vad_collector(sample_rate,frame_length,int(win_length), vad, frames, min_seg_dur)
+        segment_generator = vad_collector(SAMPLE_RATE,frame_length,int(win_length), vad, frames, min_seg_dur)
 
         blkmapFile = os.path.join(sesspath,f'{sessname}{file_suffix}.blk')
         blkmap = []
@@ -118,19 +92,17 @@ def segFromVAD(filelist,
             snum,beg,end = info
             dur = end - beg
             stream = io.BytesIO(segment)
-            seg_audio = AudioSegment.from_raw(stream, sample_width=sample_width, frame_rate=sample_rate, channels=channels)
-
-            # Note that soon an XVector-based target activity filter will be inserted at this point to select segments to keep
+            seg_audio = AudioSegment.from_raw(stream, sample_width=SAMPLE_WIDTH, frame_rate=SAMPLE_RATE, channels=CHANNELS)
 
             ## Concatenate segments to form blocks - economical/betetr resukt for some ASR providers
             # split segments longer than requested block duration
-            if dur > blksecs:
-                nsplits = int(np.floor((dur-split_overlap)/(blksecs-split_overlap)))
+            if dur > BLKSECS:
+                nsplits = int(np.floor((dur-SPLIT_OVERLAP)/(BLKSECS-SPLIT_OVERLAP)))
                 print(f'VAD segment at block {b} is longer than requested block duration, will split into {nsplits+1}')
 
                 for k in range(0,nsplits):
-                    beg_trim = k*(blksecs-split_overlap)
-                    end_trim = beg_trim + blksecs
+                    beg_trim = k*(BLKSECS-SPLIT_OVERLAP)
+                    end_trim = beg_trim + BLKSECS
                     segment_trim = seg_audio[np.round(beg_trim*1000):np.round(end_trim*1000)]
                     # print(f'trimmed AudioSegment length:{segment_trim.duration_seconds}')
                     blkmap.append( (b, added_segs+snum, beg+beg_trim, beg+end_trim)) 
@@ -159,7 +131,7 @@ def segFromVAD(filelist,
                 continue 
 
             # add segment to current block
-            if (curlen + dur) <= blksecs:
+            if (curlen + dur) <= BLKSECS:
                 blkmap.append( (b, added_segs+snum, beg,end) )
                 curlen += dur
                 if export_seg_audio: 

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import collections
 import contextlib
-import re
+import os
 import wave
 from num2words import num2words
 from decimal import InvalidOperation
@@ -16,6 +16,41 @@ from google.cloud import speech_v1p1beta1 as speechB # need the beta for diariza
 from google.cloud import speech_v1 as speech1 # need this version for confidence
 from google.cloud import storage
 
+######################
+# IO functions
+######################
+def get_sess_audio(sesspath):
+    sessname = os.path.basename(sesspath)
+
+    USE_LINKED_MEDIA = True
+    # check for linked media first, then for audio files
+    if os.path.exists(os.path.join(sesspath, 'LINKED_MEDIA.txt')   ):
+        with open(os.path.join(sesspath, 'LINKED_MEDIA.txt')) as lf:
+            audiofile = lf.read()
+        if os.path.exists(audiofile):
+            print(f'...Linked media found: {audiofile}')
+        else:
+            print(f'...Linked media not found! Will look for media in session directory...')
+            USE_LINKED_MEDIA = False
+
+    if not USE_LINKED_MEDIA:
+        # prefer wav if it exists, otherwise choose another audio file
+        if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
+            audiofile = os.path.join(sesspath, f'{sessname}.wav')   
+        else:
+            audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
+            if audiofiles:
+                if len(audiofiles) > 1: # choose one format to proceed with
+                    for f in audiofiles:
+                        if f.split('.')[-1] in ['wav', 'WAV']:
+                            audiofile = os.path.join(sesspath, f)
+                            continue
+                        else:
+                            audiofile = os.path.join(sesspath, f)
+            else:
+                print('!!!WARNING: no audio files found.')
+                audiofile=None
+    return(audiofile)
 
 ######################
 # blocking, segmenting, VAD and TAD functions
