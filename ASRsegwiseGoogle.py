@@ -39,43 +39,8 @@ def ASRsegwiseGoogle(filelist, method, clientfile):
             open(asrFullFile, 'w').close() # clear file before appending
         blkmapFile = os.path.join(sesspath,f'{sessname}.blk')
 
-        USE_LINKED_MEDIA = True
-        # check for linked media first, then for audio files
-        if os.path.exists(os.path.join(sesspath, 'LINKED_MEDIA.txt')   ):
-            with open(os.path.join(sesspath, 'LINKED_MEDIA.txt')) as lf:
-                audiofile = lf.read()
-            if os.path.exists(audiofile):
-                print(f'...Linked media found: {audiofile}')
-            else:
-                print(f'...Linked media not found! Will look for media in session directory...')
-                USE_LINKED_MEDIA = False
-        else:
-            USE_LINKED_MEDIA = False
-
-        if not USE_LINKED_MEDIA:
-            # prefer wav if it exists, otherwise choose another audio file
-            print('...looking for local audio files, prefer .wav if it exists')
-            if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
-                audiofile = os.path.join(sesspath, f'{sessname}.wav')   
-            else:
-                print('...no .wav found, checking for other audio files...')
-                audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
-                if audiofiles:
-                    if len(audiofiles) > 1: # choose one format to proceed with
-                        for f in audiofiles:
-                            if f.split('.')[-1] in ['wav', 'WAV']:
-                                audiofile = os.path.join(sesspath, f)
-                                continue
-                            else:
-                                audiofile = os.path.join(sesspath, f)
-                                print(audiofile)
-                    else:
-                        audiofile = os.path.join(sesspath, audiofiles[0])
-                else:
-                    print('!!!WARNING: no audio files found. Skipping...')
-                    continue    
-        aud_type = Path(audiofile).suffix
-        print(f'...Chose audio file of type: {aud_type}')
+        # get session audio file
+        audiofile = get_sess_audio(sesspath)
 
         # load session audio
         audio = AudioSegment.from_file(audiofile)
