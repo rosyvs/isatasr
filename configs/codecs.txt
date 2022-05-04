@@ -1,0 +1,7 @@
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV48
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_AAC16
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM16
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_AAC48
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM48
+

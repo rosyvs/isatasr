@@ -1,0 +1,39 @@
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_AAC192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV16.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV48.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM32k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM96k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM256k.wav
+
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_AAC192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WAV16.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WAV48.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WEBM32k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WEBM96k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WEBM192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex1_WEBM256k.wav
+
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_AAC192k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WAV16.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WAV48.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WEBM32k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WEBM96k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WEBM192k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti1_ex0_WEBM256k.wav
+
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_AAC192k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WAV16.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WAV48.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WEBM32k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WEBM96k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WEBM192k.wav
+data/comparison_codecs/conversion land/Crystal_21-09-14_SI_L1_P1_yeti3_ex0_WEBM256k.wav
+
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_AAC192k.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WAV16.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WAV48.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WEBM32k.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WEBM96k.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WEBM192k.wav
+data/comparison_codecs/conversion land/Faye_21-09-23_SI_L1_P2_Sony1_ex0_WEBM256k.wav

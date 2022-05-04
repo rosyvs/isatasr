@@ -1,0 +1,7 @@
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV16
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV48
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_AAC192k
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM32k
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM96k
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM192k
+data/comparison_codecs/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM256k

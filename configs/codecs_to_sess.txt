@@ -1,0 +1,7 @@
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_AAC192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV16.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WAV48.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM32k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM96k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM192k.wav
+data/comparison_codecs/conversion land/Chris_21-09-28_SI_L2_p7_ipad5_ex0_WEBM256k.wav

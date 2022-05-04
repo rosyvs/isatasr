@@ -34,9 +34,9 @@ from rosy_asr_utils import get_sess_audio
 #          |--{sessname}_{segment_no}.wav       
 
 def segFromTAD(filelist,
+        threshold=None,
         win_length=1500,
         win_slide=250,
-        threshold,
         speechbrain_dir='../speechbrain/',
         model_type='ecapa',
         enrollment_dir = 'enrollment',
@@ -46,10 +46,14 @@ def segFromTAD(filelist,
 
     # ~~~~SET SOME CONSTANTS~~~~ #
     # TAD OPTIONS: TODO: decide if we want these as function args or just hard code
-    minseg = 500 # minimum active duration (ms) to trigger seg start
-    minsil = 500 # minimum inactive duration (ms) to trigger seg end
-
-
+    MINSEG = 500 # minimum active duration (ms) to trigger seg start
+    MINSIL = 500 # minimum inactive duration (ms) to trigger seg end
+    # default thresholds (Determined using cross-validation on iSAT deep sample, optimising for pairwise speaker verification acc)
+    DEFAULT_THRESH = {}
+    DEFAULT_THRESH['xvect'] = .948
+    DEFAULT_THRESH['ecapa'] = .157
+    if not threshold: # use default values if not set
+        threshold = DEFAULT_THRESH[model_type]
     # SEGMENT BLOCKING OPTIONS:
     BLKSECS = 59 # Max Duration to block segments into. Note: Google ASR has refused some blocks if exactly 60 seconds 
     SPLIT_OVERLAP = 1 # for long segments which require cutting, overlap by this duration in seconds to avoid word splitting
@@ -57,6 +61,7 @@ def segFromTAD(filelist,
     SAMPLE_WIDTH = 2 # bytes per sample, should usually be 2
     SAMPLE_RATE = 16000 # for webrtcvad needs an srate of 8/16/32/48kHz
     CHANNELS = 1 # mono
+    # ~~~~SET SOME CONSTANTS~~~~ #
 
     # initialise encoder and verifier
     if model_type == 'ecapa':
@@ -110,6 +115,8 @@ def segFromTAD(filelist,
         print(f'found {len(found_enrFiles)} enrollment audio files...')
 
         target_embeddings = {}
+        print('Precomputing target embeddings...')
+
         for f in found_enrFiles:
             enrFile = os.path.join(sesspath, enrollment_dir, f)
             # TODO: load direct into torch or convert
@@ -122,7 +129,6 @@ def segFromTAD(filelist,
             speaker = re.sub('enrollment_simulated_','',speaker)
             speaker = re.sub('enrollment_','',speaker)
 
-            print('Precomputing target embeddings...')
             enr_signal, fs = torchaudio.load(enrFile)
             if not fs == SAMPLE_RATE:
                 # fs must be SAMPLE_RATE 
@@ -132,84 +138,89 @@ def segFromTAD(filelist,
 
         # get input file info
         metadata = torchaudio.info(audioFile)
-        total_frames = metadata.num_frames  
+        total_samples = metadata.num_frames  
         sess_fs = metadata.sample_rate
         sess_nchan = metadata.num_channels
         if not metadata.sample_rate == SAMPLE_RATE:
             # fs must be SAMPLE_RATE
             sess_resampler = torchaudio.transforms.Resample(metadata.sample_rate, SAMPLE_RATE)
 
-        WIN_SIZE = SAMPLE_RATE * win_length/1000 # in frames
-        last_win_st = total_frames - WIN_SIZE  # start frame for last window
+        WIN_SIZE = int(SAMPLE_RATE * win_length/1000) # in frames
+        SHIFT_LEN = int(SAMPLE_RATE*win_slide/1000) # in frames
+        LAST_WIN_ST = total_samples - WIN_SIZE  # start frame for last window
+        FRAME_DUR = float(1.0/SAMPLE_RATE) # single audio sample duration in seconds
 
-    #~~~~TAD FILTER~~~~#
-    state = 'o'   # indicates whether inside or outside segment
-    seg_sf = 0 # start frame of first sample in segment
-    seg_ef = 0 # start frame of last sample in segment
-    # use sliding window of WIN_SIZE frames to generate samples
-    # compare each sample to all targets
-    # generate start and end times for target segments
-    segments = []
-    for win_st in range(0,last_win_st,SHIFT_LEN):
-        # read next sample of WIN_SIZE frames
-        win_signal,fs = torchaudio.load(args.wav, frame_offset=win_st, num_frames=WIN_SIZE)
-        if not sess_nchan == 1:
-            win_signal = torch.mean(win_signal, =0, keepdim=False)
-        xv_samp = encoder.encode_batch(win_signal)
-        if not sess_fs == SAMPLE_RATE:
-            win_signal = sess_resampler(win_signal)
+        #~~~~TAD FILTER~~~~#
+        state = 'o'   # indicates whether inside or outside segment
+        seg_sf = 0 # start frame of first sample in segment
+        seg_ef = 0 # start frame of last sample in segment
+        # use sliding window of WIN_SIZE frames to generate samples
+        # compare each sample to all targets
+        # generate start and end times for target segments
+        segments = []
+        print(f'Running TAD filter on {int(LAST_WIN_ST/SHIFT_LEN)} windows...')
+        for win_st in range(0,LAST_WIN_ST,SHIFT_LEN):
+            # read next sample of WIN_SIZE frames
+            win_signal,fs = torchaudio.load(audioFile, frame_offset=win_st, num_frames=WIN_SIZE)
+            if not sess_nchan == 1:
+                win_signal = mean(win_signal, dim=0, keepdim=False)
+            emb_samp = encoder.encode_batch(win_signal)
+            if not sess_fs == SAMPLE_RATE:
+                win_signal = sess_resampler(win_signal)
 
-        # compare sample to each target
-        scores = []
-        for t in target_embeddings:
-            score = verifier.similarity(target_embeddings[t], xv_samp)
-            scores.append(score.item())
-        frame_score = 0
+            # compare sample to each target
+            scores = []
+            for speaker, emb_tgt in target_embeddings.items():
+                score = verifier.similarity(emb_tgt, emb_samp)
+                scores.append(score.item())
+            frame_score = 0
 
-        # set sample score to 1 if any target score > threshold
-        for s in scores:
-            if s > threshold: frame_score = 1
-        #tim = '%f.1' % (FRAME_DUR * win_st)
-        #print(tim, frame_score)
-
-        # if inside segment
-        if state == 'i':
-            # if sample is target continue inside seg
-            if frame_score:
-                seg_ef = win_st
-                continue
-
-            # sample is not target
-            # if seg too short, discard
-            if (seg_ef - seg_sf) < minseg:
-                state = 'o'
-                continue
-
-            # if sil too short, don't terminate seg
-            if ((win_st - seg_ef) + WIN_SIZE) < minsil: continue
-
-            # terminate and save segment
-            # determine seg boundaries in secs
-            # start mid first seg, end mid last seg
-            seg_stsec = (seg_sf + (WIN_SIZE/2)) * FRAME_DUR
-            seg_edsec = (seg_ef + (WIN_SIZE/2)) * FRAME_DUR
-            seg = []
-            seg.append(seg_stsec)
-            seg.append(seg_edsec)
-            seg.append(1)
+            # set sample score to 1 if any target score > threshold
             for s in scores:
-                seg.append(s)
-            segments.append(seg)
-            state = 'o'
+                if s > threshold: 
+                    frame_score = 1
 
-        # if outside segment
-        else:
-            # if target segment start new seg
-            if frame_score:
-                seg_sf = win_st
-                seg_ef = win_st
-                state = 'i'
-            # else continue outside
+
+            # if inside segment
+            if state == 'i':
+                # if sample is target continue inside seg
+                if frame_score:
+                    seg_ef = win_st
+                    continue
+
+                # sample is not target
+                # if seg too short, discard
+                if (seg_ef - seg_sf) < MINSEG:
+                    state = 'o'
+                    continue
+
+                # if sil too short, don't terminate seg
+                if ((win_st - seg_ef) + WIN_SIZE) < MINSIL: continue
+
+                # terminate and save segment
+                # determine seg boundaries in secs
+                # start mid first seg, end mid last seg
+                seg_stsec = (seg_sf + (WIN_SIZE/2)) * FRAME_DUR
+                seg_edsec = (seg_ef + (WIN_SIZE/2)) * FRAME_DUR
+                seg = []
+                seg.append(seg_stsec)
+                seg.append(seg_edsec)
+                seg.append(1)
+                for s in scores:
+                    seg.append(s)
+                segments.append(seg)
+                state = 'o'
+
+            # if outside segment
+            else:
+                # if target segment start new seg
+                if frame_score:
+                    seg_sf = win_st
+                    seg_ef = win_st
+                    state = 'i'
+                # else continue outside
+
+        print(segments)
 
     # with open("out.csv", "w", newline="") as f:
     #     writer = csv.writer(f)
