@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import collections
 import contextlib
+from pathlib import Path
 import os
 import wave
 from num2words import num2words
@@ -32,14 +33,18 @@ def get_sess_audio(sesspath):
         else:
             print(f'...Linked media not found! Will look for media in session directory...')
             USE_LINKED_MEDIA = False
+    else:
+        USE_LINKED_MEDIA = False
 
     if not USE_LINKED_MEDIA:
         # prefer wav if it exists, otherwise choose another audio file
         if os.path.exists(os.path.join(sesspath, f'{sessname}.wav')   ):
             audiofile = os.path.join(sesspath, f'{sessname}.wav')   
+            print('...local WAV file found.')
         else:
             audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
             if audiofiles:
+                print(3)
                 if len(audiofiles) > 1: # choose one format to proceed with
                     for f in audiofiles:
                         if f.split('.')[-1] in ['wav', 'WAV']:
@@ -47,6 +52,10 @@ def get_sess_audio(sesspath):
                             continue
                         else:
                             audiofile = os.path.join(sesspath, f)
+                else: # only 1 audio file found
+                    audiofile = audiofiles[0]
+                    aud_type = Path(audiofile).suffix
+                print(f'...local {aud_type} file found.')
             else:
                 print('!!!WARNING: no audio files found.')
                 audiofile=None
