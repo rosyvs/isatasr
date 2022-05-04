@@ -71,6 +71,7 @@ def segFromVAD(filelist,
 
         # load session audio
         sess_audio = AudioSegment.from_file(audiofile)
+        print(f'Full recording duration: {sess_audio.duration_seconds} seconds')
 
         # # set sample rate and channels 
         sess_audio = sess_audio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
