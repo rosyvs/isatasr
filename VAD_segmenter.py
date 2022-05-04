@@ -168,7 +168,7 @@ def segFromVAD(filelist,
                 line = ' '.join(str(x) for x in segment)
                 outfile.write(line + '\n')
 
-        print(f'VAD split audio into {s} segments, and blocked into {b} blocks.')
+        print(f'VAD split audio into {blkmap[-1][1]} segments, and blocked into {b} blocks.')
         # segment coverage - how much audio remains after VAD filtering. 
         coverage = segment_coverage(blkmapFile, audiofile)
         print(f'SEGMENT COVERAGE: {100*coverage:.2f}% of original audio [{sessname}]')
