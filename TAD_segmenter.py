@@ -1,5 +1,5 @@
 import torchaudio
-from torch import tensor, cat, squeeze
+from torch import tensor, cat, squeeze, mean
 import os
 from pathlib import Path
 import re
@@ -89,23 +89,22 @@ def segFromTAD(filelist,
             os.makedirs(blkDir, exist_ok=True)
 
         # get session audio to filter
-        audiofile = get_sess_audio(sesspath)
-        if not audiofile:
+        audioFile = get_sess_audio(sesspath)
+        if not audioFile:
             print('!!! No audio file found! Skipping...')
             continue
         else:
-            aud_type = Path(audiofile).suffix
+            aud_type = Path(audioFile).suffix
             print(f'Input media type: {aud_type}')
 
         # load session audio
-        sessAudio = AudioSegment.from_file(audiofile)
-        # TODO: convert to torch or jus read diretcly with torch
-
-        # # set sample rate and channels 
-        sessAudio = sessAudio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
+        # sessAudio = AudioSegment.from_file(audioFile)
+        # TODO: can torch even deal with .MOV etc? 
+    
+        # # # set sample rate and channels 
+        # sessAudio = sessAudio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
 
         # get enrollment audio
-        enrollment_list = []
         found_enrFiles = [f for f in os.listdir(os.path.join(sesspath,enrollment_dir)) \
             if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
         print(f'found {len(found_enrFiles)} enrollment audio files...')
@@ -114,26 +113,32 @@ def segFromTAD(filelist,
         for f in found_enrFiles:
             enrFile = os.path.join(sesspath, enrollment_dir, f)
             # TODO: load direct into torch or convert
-            enrAudio = AudioSegment.from_file(enrFile)
-            enrDur = enrAudio.duration_seconds
-            # convert as needed
-            enrAudio =enrAudio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
+            # enrAudio = AudioSegment.from_file(enrFile)
+            # enrDur = enrAudio.duration_seconds
+            # # convert as needed
+            # enrAudio =enrAudio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
             # strip keyword parts of filename in crude attempt to get target name 
             speaker =  os.path.basename(f)
             speaker = re.sub('enrollment_simulated_','',speaker)
             speaker = re.sub('enrollment_','',speaker)
 
             print('Precomputing target embeddings...')
-            signal, fs = torchaudio.load(enrFile)
-            if not fs == 16000:
-                # fs must be 16000 
-                to16k = torchaudio.transforms.Resample(fs, 16000)
-                signal = to16k(signal)
-            target_embeddings[speaker] = encoder.encode_batch(signal)
+            enr_signal, fs = torchaudio.load(enrFile)
+            if not fs == SAMPLE_RATE:
+                # fs must be SAMPLE_RATE 
+                enr_resampler = torchaudio.transforms.Resample(fs, SAMPLE_RATE)
+                enr_signal = enr_resampler(enr_signal)
+            target_embeddings[speaker] = encoder.encode_batch(enr_signal)
 
         # get input file info
-        metadata = torchaudio.info(sessAudio)
+        metadata = torchaudio.info(audioFile)
         total_frames = metadata.num_frames  
+        sess_fs = metadata.sample_rate
+        sess_nchan = metadata.num_channels
+        if not metadata.sample_rate == SAMPLE_RATE:
+            # fs must be SAMPLE_RATE
+            sess_resampler = torchaudio.transforms.Resample(metadata.sample_rate, SAMPLE_RATE)
+
         WIN_SIZE = SAMPLE_RATE * win_length/1000 # in frames
         last_win_st = total_frames - WIN_SIZE  # start frame for last window
 
@@ -147,8 +152,12 @@ def segFromTAD(filelist,
     segments = []
     for win_st in range(0,last_win_st,SHIFT_LEN):
         # read next sample of WIN_SIZE frames
-        win,fs = torchaudio.load(args.wav, frame_offset=win_st, num_frames=WIN_SIZE)
-        xv_samp = encoder.encode_batch(win)
+        win_signal,fs = torchaudio.load(args.wav, frame_offset=win_st, num_frames=WIN_SIZE)
+        if not sess_nchan == 1:
+            win_signal = torch.mean(win_signal, =0, keepdim=False)
+        xv_samp = encoder.encode_batch(win_signal)
+        if not sess_fs == SAMPLE_RATE:
+            win_signal = sess_resampler(win_signal)
 
         # compare sample to each target
         scores = []
@@ -202,6 +211,6 @@ def segFromTAD(filelist,
                 state = 'i'
             # else continue outside
 
-    with open("out.csv", "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerows(segments)
+    # with open("out.csv", "w", newline="") as f:
+    #     writer = csv.writer(f)
+    #     writer.writerows(segments)
