@@ -19,7 +19,7 @@
 /mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p5_yeti07.MOV
 /mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p6_yeti05.MOV
 /mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p6_yeti07.MOV
-/mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p6_yeti10.m4a
+/mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p6_yeti10.m4aC
 /mnt/isat-data-repository/Crystal_21-11-01_SI_L1_p6_yeti9.m4a
 /mnt/isat-data-repository/Crystal_21-11-01_SI_L1_wide(2).MOV
 /mnt/isat-data-repository/Crystal_21-11-04_SI_L2_P2_Close.MP4
