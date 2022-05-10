@@ -43,6 +43,20 @@ def segFromTAD(filelist,
         enrollment_dir = 'enrollment',
         export_seg_audio=False,
         file_suffix=''):
+    
+    """Run segmentation on a list of files using target enrollment and deep speaker verification model
+
+    Args:
+        filelist (str): list of sessions to run TAD on
+        threshold (float, optional): cutoff threshold for verification score to pass/reject. Defaults to None.
+        win_len_s (float, optional): window length for computing score (seconds). Defaults to 1.5.
+        win_shift_s (float, optional): window shift for sliding window (seconds). Defaults to .25.
+        speechbrain_dir (str, optional): relative path to speechbrain for pretrained models. Defaults to '../speechbrain/'.
+        model_type (str, optional): embedding type: 'ecapa' or 'xvect'. Defaults to 'ecapa'.
+        enrollment_dir (str, optional): subdirectory of session directory containing target enrollemnt wavs. Defaults to 'enrollment'.
+        export_seg_audio (bool, optional): export passed audio segment as audio?. Defaults to False.
+        file_suffix (str, optional): arbitrary suffix for naming .blk file, useful if you want to run experiments with params. Defaults to ''.
+    """    
 
 
     # ~~~~SET SOME CONSTANTS~~~~ #
@@ -99,12 +113,12 @@ def segFromTAD(filelist,
             os.makedirs(blkDir, exist_ok=True)
 
         # get session audio to filter
-        audioFile = get_sess_audio(sesspath)
-        if not audioFile:
+        audio_file = get_sess_audio(sesspath)
+        if not audio_file:
             print('!!! No audio file found! Skipping...')
             continue
         else:
-            aud_type = Path(audioFile).suffix
+            aud_type = Path(audio_file).suffix
             print(f'Input media type: {aud_type}')
 
         # get enrollment audio
@@ -141,7 +155,7 @@ def segFromTAD(filelist,
         # sessAudio = sessAudio.set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH).set_frame_rate(SAMPLE_RATE)
 
         # get input file info
-        metadata = torchaudio.info(audioFile)
+        metadata = torchaudio.info(audio_file)
         total_samples = metadata.num_frames  
         total_secs = total_samples/metadata.sample_rate
         sess_fs = metadata.sample_rate
@@ -151,7 +165,7 @@ def segFromTAD(filelist,
             # fs must be SAMPLE_RATE
             print(f'Audio has Fs={sess_fs}, Fs={SAMPLE_RATE_TAD} required for TAD. Will downsample.')
             win_resampler = torchaudio.transforms.Resample(sess_fs, SAMPLE_RATE_TAD)
-        torchaudio.info(audioFile)
+        torchaudio.info(audio_file)
         WIN_SAMPLES = int(SAMPLE_RATE_TAD * win_len_s) # in frames
         SHIFT_SAMPLES = int(SAMPLE_RATE_TAD*win_shift_s) # in frames
         LAST_WIN_S = total_secs - win_len_s  # start frame for last window
@@ -174,7 +188,7 @@ def segFromTAD(filelist,
             target_detected = 0
             win_start_s = win*win_shift_s
             # read next sample of WIN_SIZE frames
-            win_signal,enr_fs = torchaudio.load(audioFile, 
+            win_signal,enr_fs = torchaudio.load(audio_file, 
             frame_offset=int(win_start_s*sess_fs), num_frames=int(win_len_s*sess_fs))
             # set to mono and correct sample rate for TAD
             if not sess_nchan == 1:
@@ -253,10 +267,20 @@ def segFromTAD(filelist,
 
         print(f'TAD split audio into {blkmap[-1][1]+1} segments.')
         # segment coverage - how much audio remains after VAD filtering. 
-        coverage = segment_coverage(blkmapFile, audioFile)
+        coverage = segment_coverage(blkmapFile, audio_file)
         print(f'SEGMENT COVERAGE: {100*coverage:.2f}% of original audio [{sessname}]')
         if coverage >1:
             print('--coverage greater than 100%% because of overlap between split segments')
+
+def eval_segmentation(ref_blk, hyp_blk, audioFile):
+    """Compute evaluation metrics for segmenters
+
+    Args:
+        ref_blk (str): path to reference .blk file (i.e. derived from gold-dstandard manual annotation)
+        hyp_blk (str): path to .blk file for evaluation (e.g. VAD, TAD)
+        audioFile (str): path to audio file (for getting total duration)
+    """    
+
 
 # to run from command line:
 if __name__ == "__main__":
