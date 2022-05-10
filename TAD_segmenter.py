@@ -270,17 +270,7 @@ def segFromTAD(filelist,
         coverage = segment_coverage(blkmapFile, audio_file)
         print(f'SEGMENT COVERAGE: {100*coverage:.2f}% of original audio [{sessname}]')
         if coverage >1:
-            print('--coverage greater than 100%% because of overlap between split segments')
-
-def eval_segmentation(ref_blk, hyp_blk, audioFile):
-    """Compute evaluation metrics for segmenters
-
-    Args:
-        ref_blk (str): path to reference .blk file (i.e. derived from gold-dstandard manual annotation)
-        hyp_blk (str): path to .blk file for evaluation (e.g. VAD, TAD)
-        audioFile (str): path to audio file (for getting total duration)
-    """    
-
+            print('--coverage greater than 100%% because of overlap between split segments')  
 
 # to run from command line:
 if __name__ == "__main__":

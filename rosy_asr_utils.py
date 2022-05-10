@@ -202,6 +202,15 @@ def segment_coverage(blkfile, sesswav):
     coverage = seg_total_dur/sess_duration
     return coverage
 
+def eval_segmentation(ref_blk, hyp_blk, audio_file):
+    """Compute evaluation metrics for segmenters
+
+    Args:
+        ref_blk (str): path to reference .blk file (i.e. derived from gold-dstandard manual annotation)
+        hyp_blk (str): path to .blk file for evaluation (e.g. VAD, TAD)
+        audioFile (str): path to audio file (for getting total duration)
+    """  
+
 ######################
 # ASR functions
 ######################
