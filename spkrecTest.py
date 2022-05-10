@@ -12,7 +12,7 @@ import json
 import pprint
 from pydub.audio_segment import AudioSegment, effects
 from sklearn.metrics import accuracy_score, confusion_matrix, recall_score, precision_score
-
+from rosy_asr_utils import get_overlap
 
 
 def get_all_spkr_labels(labels, start_s, end_s):
@@ -47,14 +47,6 @@ def labels_to_samples(labels, audio_dur, frame_dur_s, frame_shift_s, label_type 
 
         samples.append((s, s+frame_dur_s, sample_label))
     return samples
-
-def get_overlap(start1, end1, start2, end2):
-    # start1, end1, start2, end2 are each floats
-    # returns size of overlap
-    # TODO some oddities due to FP precision 
-
-    overlap_duration = max(0.0, min(end1,end2) - max(start1,start2))
-    return overlap_duration
 
 def any_label_match(labels_1, labels_2):
     # check if any labels in list/tuple labels_1 matches any labels in list/tuple labels_2

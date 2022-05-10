@@ -1,7 +1,7 @@
 import os
 import pandas as pd
-from VAD_TAD_block import segFromVAD
-from spkrecTest import get_overlap
+from VAD_segmenter import segFromVAD
+from rosy_asr_utils import get_overlap
 from tqdm import tqdm
 # Run VAD with different settings and use gold standard speaker labelling to evaluate 
 
