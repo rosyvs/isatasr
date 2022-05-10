@@ -176,6 +176,13 @@ def vad_collector(sample_rate, frame_duration_ms,
         yield (b''.join([f.bytes for f in voiced_frames]) , seg_info)
         numseg += 1
 
+def get_overlap(start1, end1, start2, end2):
+    # start1, end1, start2, end2 are each floats representing start/end of 2 intervals
+    # returns size of overlap
+    # TODO: some oddities due to FP precision 
+    overlap_duration = max(0.0, min(end1,end2) - max(start1,start2))
+    return overlap_duration
+
 def segment_coverage_legacy(segfile, sesswav):
     # computes % coverage of VAD-detected segments relative to the original full session file
     # old version using .seg files
@@ -210,6 +217,29 @@ def eval_segmentation(ref_blk, hyp_blk, audio_file):
         hyp_blk (str): path to .blk file for evaluation (e.g. VAD, TAD)
         audioFile (str): path to audio file (for getting total duration)
     """  
+    # read in ground truth labels
+    ref_segs = pd.read_table(ref_blk, sep=' ', names =['b','s','start_sec','end_sec'])
+    # read in hypothesis .blk
+    hyp_segs = pd.read_table(hyp_blk, sep=' ', names =['b','s','start_sec','end_sec'])
+
+    overlap=0.0
+    # compute overlap
+    for index1, row1 in hyp_segs.iterrows():
+        overlaps = ref_segs.apply(lambda row: get_overlap(row['start_sec'],row['end_sec'],row1['start_sec'],row1['end_sec'] ), axis=1)
+        overlap += sum(overlaps)
+    ref_durs = ref_segs['end_sec'] - ref_segs['start_sec']
+    hyp_durs = hyp_segs['end_sec'] - hyp_segs['start_sec']
+
+    mean_ref_dur = ref_durs.mean()
+    mean_hyp_dur =hyp_durs.mean()
+    recall_prop = overlap / ref_durs.sum()
+    precision_prop = overlap / hyp_durs.sum()
+    # store in df: add row
+    result = (overlap, 
+    recall_prop, 
+    precision_prop, 
+    mean_hyp_dur, 
+    mean_ref_dur)
 
 ######################
 # ASR functions
