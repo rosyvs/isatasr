@@ -3,12 +3,13 @@ from torch import tensor, cat, squeeze, mean
 import os
 from pathlib import Path
 import re
+import argparse
 import pandas as pd
 import numpy as np
 from pydub.audio_segment import AudioSegment, effects
 from speechbrain.pretrained import EncoderClassifier, SpeakerRecognition
 from speechbrain.utils.metric_stats import EER
-from rosy_asr_utils import get_sess_audio
+from rosy_asr_utils import get_sess_audio, segment_coverage
 from tqdm import tqdm
 
 # ASR pipeline
@@ -19,9 +20,9 @@ from tqdm import tqdm
 
 # Takes .wav audio from session directories with relative path <sesspath> specifed in control file
 # - uses TAD to segment audio into utterances, requires enrollment audio
-# - concatenates utterances to blocks of maximum duration blksecs (1 minute suggested as 
+# - TODO:concatenates utterances to blocks of maximum duration blksecs (1 minute suggested as 
 # most economcial for sending to REV, max duration for synchronous Google ASR)
-# - exports segment and block audio in subdirectories (see below)
+# - TODO: exports segment and block audio in subdirectories (see below)
 
 # session directory structure for a given audio file should be:
 #    |--{sessname}
@@ -35,7 +36,7 @@ from tqdm import tqdm
 
 def segFromTAD(filelist,
         threshold=None,
-        win_length_s=1.5,
+        win_len_s=1.5,
         win_shift_s=.25,
         speechbrain_dir='../speechbrain/',
         model_type='ecapa',
@@ -54,6 +55,7 @@ def segFromTAD(filelist,
     DEFAULT_THRESH['ecapa'] = .157
     if not threshold: # use default values if not set
         threshold = DEFAULT_THRESH[model_type]
+
     # TODO: SEGMENT BLOCKING OPTIONS:
     b=0 # just call everything block 0 for now
     BLKSECS = 59 # Max Duration to block segments into. Note: Google ASR has refused some blocks if exactly 60 seconds 
@@ -87,6 +89,8 @@ def segFromTAD(filelist,
         sessname = os.path.basename(sesspath)
         blkmapFile = os.path.join(sesspath, f'TAD_{sessname}.blk')
         blkmap=[]
+        tgtScoresFile = os.path.join(sesspath, f'TADtgtScores_{model_type}_{sessname}.txt')
+        tgtScores = []
         if export_seg_audio: 
             print('Exporting segmented audio...')
             segDir = os.path.join(sesspath, f'TADsegments{file_suffix}')
@@ -148,9 +152,9 @@ def segFromTAD(filelist,
             print(f'Audio has Fs={sess_fs}, Fs={SAMPLE_RATE_TAD} required for TAD. Will downsample.')
             win_resampler = torchaudio.transforms.Resample(sess_fs, SAMPLE_RATE_TAD)
         torchaudio.info(audioFile)
-        WIN_SAMPLES = int(SAMPLE_RATE_TAD * win_length_s) # in frames
+        WIN_SAMPLES = int(SAMPLE_RATE_TAD * win_len_s) # in frames
         SHIFT_SAMPLES = int(SAMPLE_RATE_TAD*win_shift_s) # in frames
-        LAST_WIN_S = total_secs - win_length_s  # start frame for last window
+        LAST_WIN_S = total_secs - win_len_s  # start frame for last window
         print(LAST_WIN_S)
         SAMPLE_DUR = 1.0/SAMPLE_RATE_TAD # single audio sample duration in seconds
         MINSEG = SAMPLE_RATE_TAD * MINSEG_S
@@ -171,7 +175,7 @@ def segFromTAD(filelist,
             win_start_s = win*win_shift_s
             # read next sample of WIN_SIZE frames
             win_signal,enr_fs = torchaudio.load(audioFile, 
-            frame_offset=int(win_start_s*sess_fs), num_frames=int(win_length_s*sess_fs))
+            frame_offset=int(win_start_s*sess_fs), num_frames=int(win_len_s*sess_fs))
             # set to mono and correct sample rate for TAD
             if not sess_nchan == 1:
                 win_signal = mean(win_signal, dim=0, keepdim=False)
@@ -205,28 +209,25 @@ def segFromTAD(filelist,
                     continue
 
                 # if sil too short, don't terminate previousseg
-                if ((win_start_s - seg_end_s) + win_length_s) < MINSIL_S: 
+                if ((win_start_s - seg_end_s) + win_len_s) < MINSIL_S: 
                     continue
 
                 # terminate and save segment
                 # determine seg boundaries in secs
                 # start mid first seg, end mid last seg # TODO: not sure about this, why not take whole seg
-                seg_stsec = seg_start_s + (win_length_s/2) 
-                seg_edsec = seg_end_s + (win_length_s/2)
-                # seg = []
-                # seg.append(seg_stsec)
-                # seg.append(seg_edsec)
-                # seg.append(1)
-                # print(seg)
+                seg_stsec = seg_start_s + (win_len_s/2) 
+                seg_edsec = seg_end_s + (win_len_s/2)
                 blkseg = [b, seg, seg_stsec, seg_edsec] # for blk file
+                blkmap.append(blkseg)
 
                 segscores = [b, seg, seg_stsec, seg_edsec]
-                seg+=1
-
                 for s in scores:
                     segscores.append(s)
-                blkmap.append(blkseg)
+                tgtScores.append(segscores)
+
+                # reset state / increment segment counter
                 state = 'o'
+                seg+=1
 
             # if outside segment
             else:
@@ -236,8 +237,6 @@ def segFromTAD(filelist,
                     seg_end_s = win_start_s # TODO: why both set to win_start? 
                     state = 'i'
                 # else continue outside
-
-        print(blkmap)
         # #TODO:if export_seg_audio: 
         #     # end of loop over segments: write out any remaining audio to final block
         #     blkwavpath = os.path.join(blkDir,f'{sessname}_{b}.wav' )
@@ -247,6 +246,36 @@ def segFromTAD(filelist,
             for segment in blkmap:
                 line = ' '.join(str(x) for x in segment)
                 outfile.write(line + '\n')
-    # with open("out.csv", "w", newline="") as f:
-    #     writer = csv.writer(f)
-    #     writer.writerows(segments)
+        with open(tgtScoresFile, 'w') as outfile:
+            for segment in tgtScores:
+                line = ' '.join(str(x) for x in segment)
+                outfile.write(line + '\n')
+
+        print(f'TAD split audio into {blkmap[-1][1]+1} segments.')
+        # segment coverage - how much audio remains after VAD filtering. 
+        coverage = segment_coverage(blkmapFile, audioFile)
+        print(f'SEGMENT COVERAGE: {100*coverage:.2f}% of original audio [{sessname}]')
+        if coverage >1:
+            print('--coverage greater than 100%% because of overlap between split segments')
+
+# to run from command line:
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run VAD')
+    parser.add_argument('filelist',nargs='?', default='./configs/EXAMPLE.txt', help='path to text file containing list of file paths to run TAD on')
+    parser.add_argument('enrollment_dir',nargs='?', default='enrollment', help='path to enrollments relative to session directory')
+    parser.add_argument('-t','--threshold',  help='Threshold score for speaker verification')
+    parser.add_argument('-wl','--win_len_s', default=1.5,help='window size (ms) for VAD buffer')
+    parser.add_argument('-ws','--win_shift_s', default=.25,help='window size (ms) for VAD buffer')
+    parser.add_argument('-m','--model_type',  default='ecapa', help='model type ["ecapa","xvect"]')
+    parser.add_argument('-e','--export_seg_audio',action='store_true',help='export segmented & blocked audio? (default False)')
+    parser.add_argument('-f','--file_suffix',default='', help='filename suffix for .blk file of segment start and end times')
+
+    args = parser.parse_args()
+
+    segFromTAD(filelist=args.filelist,
+        win_len_s=args.win_len_s,
+        win_shift_s=args.win_shift_s,
+        speechbrain_dir='../speechbrain/',
+        model_type=args.model_type,
+        enrollment_dir = args.enrollment_dir,
+        export_seg_audio=args.export_seg_audio)
