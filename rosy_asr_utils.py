@@ -222,24 +222,70 @@ def eval_segmentation(ref_blk, hyp_blk, audio_file):
     # read in hypothesis .blk
     hyp_segs = pd.read_table(hyp_blk, sep=' ', names =['b','s','start_sec','end_sec'])
 
+    sess_audio = AudioSegment.from_file(audio_file)
+    total_dur = sess_audio.duration_seconds
+
     overlap=0.0
     # compute overlap
-    for index1, row1 in hyp_segs.iterrows():
-        overlaps = ref_segs.apply(lambda row: get_overlap(row['start_sec'],row['end_sec'],row1['start_sec'],row1['end_sec'] ), axis=1)
+    for hyp_ix, hyp_row in hyp_segs.iterrows():
+        overlaps = ref_segs.apply(lambda row: get_overlap(row['start_sec'],row['end_sec'],hyp_row['start_sec'],hyp_row['end_sec'] ), axis=1)
         overlap += sum(overlaps)
     ref_durs = ref_segs['end_sec'] - ref_segs['start_sec']
     hyp_durs = hyp_segs['end_sec'] - hyp_segs['start_sec']
+    pass_dur = hyp_durs.sum()
+    reference_dur = ref_durs.sum()
+    reject_dur = total_dur-hyp_durs.sum()
+
+    # TODO: TP, FP, CR, FA
+    TP = overlap/reference_dur
+    FP =(pass_dur-overlap)/(total_dur-reference_dur)
+    FN = 1-TP
+    TN = 1-FP
+
 
     mean_ref_dur = ref_durs.mean()
-    mean_hyp_dur =hyp_durs.mean()
+    mean_hyp_dur = hyp_durs.mean()
     recall_prop = overlap / ref_durs.sum()
     precision_prop = overlap / hyp_durs.sum()
+    F1_prop = precision_prop * recall_prop * 2 / (precision_prop + recall_prop)
     # store in df: add row
-    result = (overlap, 
-    recall_prop, 
-    precision_prop, 
-    mean_hyp_dur, 
-    mean_ref_dur)
+    result = {'total_dur':total_dur,
+    'pass_dur':pass_dur,
+    'reject_dur':reject_dur,
+    'reference_dur':reference_dur,
+    'overlap_dur':overlap, 
+    'TP':TP,
+    'TN':TN,
+    'FP':FP,
+    'FN':FN,
+    'recall_prop':recall_prop, 
+    'precision_prop':precision_prop,
+    'F1_prop':F1_prop,
+    'mean_hyp_seg_dur':mean_hyp_dur, 
+    'mean_ref_seg_dur':mean_ref_dur,
+    }
+    return result
+
+def exportSegAudio(blk, audio_file,segDir='segments'):
+    print(audio_file)
+    sess_audio = AudioSegment.from_wav(audio_file)
+    sessname = os.path.basename(audio_file).split('.')[0]
+    print(f'sessname: {sessname}')
+    sesspath = os.path.dirname(audio_file)
+    os.makedirs(os.path.join(sesspath,segDir), exist_ok = True)
+    for line in open(blk):
+        line = line.strip()
+        if not line: continue
+        b, s, start_sec, end_sec = line.split()
+        b = int(b)
+        s = int(s)
+        start_sec = float(start_sec)
+        end_sec= float(end_sec)       
+        seg_audio = sess_audio[start_sec*1000:end_sec*1000]
+        _,aud_type = os.path.splitext(audio_file)
+        segAudioFile = os.path.join(sesspath,segDir,f'{sessname}_{s}{aud_type}' )
+        seg_audio.export(segAudioFile)
+
 
 ######################
 # ASR functions
