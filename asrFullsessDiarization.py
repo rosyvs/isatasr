@@ -20,7 +20,7 @@ storage_client = storage.Client.from_service_account_json("isatasr-91d68f52de4d.
 # parser.add_argument('ctl')
 # args = parser.parse_args()
 
-args_ctl =os.path.join('configs', 'asr_comparison_mics_onesess.txt')
+args_ctl =os.path.join('configs', 'demo.txt')
 # args_ctl =os.path.join('configs', 'one_sess.txt')
 
 # ctl has list of paths to sessions to process

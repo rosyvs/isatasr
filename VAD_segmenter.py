@@ -70,7 +70,7 @@ def segFromVAD(filelist,
             print(audio_file)
 
         # load session audio
-        sess_audio = AudioSegment.from_file(os.path.join(sesspath,audio_file))
+        sess_audio = AudioSegment.from_file(audio_file)
         print(f'Full recording duration: {sess_audio.duration_seconds} seconds')
 
         # # set sample rate and channels 
@@ -179,7 +179,7 @@ def segFromVAD(filelist,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run VAD')
     parser.add_argument('filelist',nargs='?', default='./configs/EXAMPLE.txt', help='path to text file containing list of file paths to run VAD on')
-    parser.add_argument('range_file', nargs='?', default=None, help='Specify time range to extract segments from media, reading from ')
+    #parser.add_argument('range_file', nargs='?', default=None, help='Specify time range to extract segments from media, reading from file')
     parser.add_argument('-e','--export_seg_audio',action='store_true',help='export segmented & blocked audio? (default False)')
     parser.add_argument('-a','--agg', default=1,help='aggressiveness of VAD (0-3)')
     parser.add_argument('-l','--frame_length', default=20,help='frame length sent to VAD')
