@@ -44,7 +44,6 @@ def get_sess_audio(sesspath):
         else:
             audiofiles = [f for f in os.listdir(sesspath) if f.split('.')[-1] in ['MOV', 'mov', 'WAV', 'wav', 'mp4', 'mp3', 'm4a', 'aac', 'flac', 'alac', 'ogg']]
             if audiofiles:
-                print(3)
                 if len(audiofiles) > 1: # choose one format to proceed with
                     for f in audiofiles:
                         if f.split('.')[-1] in ['wav', 'WAV']:

@@ -60,17 +60,17 @@ def segFromVAD(filelist,
             os.makedirs(segDir, exist_ok=True)
             os.makedirs(blkDir, exist_ok=True)
 
-        audiofile = get_sess_audio(sesspath)
-        if not audiofile:
+        audio_file = get_sess_audio(sesspath)
+        if not audio_file:
             print('!!! No audio file found! Skipping...')
             continue
         else:
-            aud_type = Path(audiofile).suffix
+            aud_type = Path(audio_file).suffix
             print(f'Input media type: {aud_type}')
-
+            print(audio_file)
 
         # load session audio
-        sess_audio = AudioSegment.from_file(audiofile)
+        sess_audio = AudioSegment.from_file(os.path.join(sesspath,audio_file))
         print(f'Full recording duration: {sess_audio.duration_seconds} seconds')
 
         # # set sample rate and channels 
@@ -171,7 +171,7 @@ def segFromVAD(filelist,
 
         print(f'VAD split audio into {blkmap[-1][1]+1} segments, and blocked into {b+1} blocks.')
         # segment coverage - how much audio remains after VAD filtering. 
-        coverage = segment_coverage(blkmapFile, audiofile)
+        coverage = segment_coverage(blkmapFile, audio_file)
         print(f'SEGMENT COVERAGE: {100*coverage:.2f}% of original audio [{sessname}]')
         if coverage >1:
             print('--coverage greater than 100%% because of overlap between split segments')

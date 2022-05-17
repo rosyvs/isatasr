@@ -113,7 +113,7 @@ def segFromTAD(filelist,
             os.makedirs(blkDir, exist_ok=True)
 
         # get session audio to filter
-        audio_file = get_sess_audio(sesspath)
+        audio_file = get_sess_audio(sesspath) # TODO: does this need path prepending??
         if not audio_file:
             print('!!! No audio file found! Skipping...')
             continue
