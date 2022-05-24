@@ -59,6 +59,7 @@ def get_sess_audio(sesspath):
                 print('!!!WARNING: no audio files found.')
                 audiofile=None
     return(os.path.join(sesspath, audiofile))
+    # return audiofile
 
 ######################
 # blocking, segmenting, VAD and TAD functions
