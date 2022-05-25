@@ -6,7 +6,7 @@ import os
 import shutil
 
 # ASR pipeline
-# 1. prepSessDirs
+# 1. prepSessDirs (+ extractSample if using shorter samples)
 # 2. VAD_segmenter / TAD_segmenter (uses automated segmentation) OR segFromAnnotation (uses timestamped transcript)
 # 3. ASRsegwiseGoogle (or REV, Watson)
 # 4. WER_by_speaker (after formatELANtranscripts/formatREVtranscripts)
