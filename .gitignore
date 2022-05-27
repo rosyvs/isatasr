@@ -11,10 +11,12 @@ __pycache__/
 .RData
 .Rhistory
 *.xlsx
-*.csv
 
 *.json
 *.wav
 *.mp4
+*.MP4
 *.MOV
+*.mov
 *.webm
+*.mp3
