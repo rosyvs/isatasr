@@ -107,7 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('datadir', nargs='?', default='./data/deepSampleTEST/', help='root path of session directories')
     parser.add_argument('extract_timings_csv', nargs='?', default='./configs/deepSampleTEST_to_extract.csv', help='csv with columns for sessname, start (sec), end (sec)')
     parser.add_argument('outdir_stem', nargs='?',default= './data/deepSampleTEST/',help='root path of directory to put sample session directories')
-    parser.add_argument('suffix', nargs='?', default='_5min', help='suffix for naming sample session')
+    parser.add_argument('-s','--suffix', default='_5min', help='suffix for naming sample session')
     parser.add_argument('-c','--convert', action='store_true', help='convert media to preferred formats (wav, mp4) - default False')
     args = parser.parse_args()
 
