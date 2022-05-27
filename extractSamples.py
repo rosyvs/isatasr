@@ -15,7 +15,7 @@ def HHMMSS_to_sec(time_str):
     if time_str.count(':')==2:
         h, m, s = time_str.split(':')
     else:
-        print(f'input string format not supported: {time_str}')
+        print(f'!!!input string format not supported: {time_str}')
     return int(h) * 3600 + int(m) * 60 + float(s) 
 
 def extractSamples(datadir,
@@ -47,7 +47,6 @@ def extractSamples(datadir,
             print(f'!!!WARNING: session directory not found: {sesspath}')
             continue
         outdir = os.path.join(outdir_stem, f'{sessname}{suffix_use}')
-        print(outdir)
         if not os.path.exists(outdir):
             os.makedirs(outdir)
 
@@ -56,13 +55,13 @@ def extractSamples(datadir,
             print(f'!!!WARNING: no media found for {sessname}')
             continue
         media_type = Path(media_file).suffix
-        print(f'Input media: {media_file}')
+        print(f'...Input media: {media_file}')
 
         # detect if audio or video
         if media_type in ['.MOV', '.mov', '.mp4']: # media is VIDEO
-            print('media is VIDEO')
             if convert:
                 ext = '.mp4'
+                print(f'...converting to {ext}')
             else:
                 ext = media_type
             # .MOV causes ELAN compatability issues for annotators on Windows - convert to mp4
@@ -86,14 +85,16 @@ def extractSamples(datadir,
 
         else: # media is AUDIO
             sess_audio = AudioSegment.from_file(media_file)
-            print(f'Full recording duration: {sess_audio.duration_seconds} seconds')
+            # print(f'...Full recording duration: {sess_audio.duration_seconds} seconds')
             excerpt = sess_audio[sg_start_ms:sg_end_ms]
             if convert:
                 ext = '.wav'
                 outfile = os.path.join(outdir,f'{sessname}{suffix_use}{ext}')
                 excerpt = excerpt.set_channels(WAV_CHANNELS)
                 excerpt = excerpt.set_frame_rate(WAV_SAMPLE_RATE)
+                print(f'...converting to {ext}')
                 excerpt.export(outfile, format='wav')
+
             else: # keep original media type
                 ext = media_type
                 outfile = os.path.join(outdir,f'{sessname}{suffix_use}{ext}')
