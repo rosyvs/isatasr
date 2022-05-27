@@ -57,7 +57,7 @@ def get_sess_audio(sesspath):
                 print(f'...local {aud_type} file found.')
             else:
                 print('!!!WARNING: no audio files found.')
-                audiofile=None
+                return None
     return(os.path.join(sesspath, audiofile))
     # return audiofile
 
