@@ -47,9 +47,6 @@ def extractSamples(datadir,
         if not os.path.exists(sesspath):
             print(f'!!!WARNING: session directory not found: {sesspath}')
             continue
-        outdir = os.path.join(outdir_stem, f'{sessname}{suffix_use}')
-        if not os.path.exists(outdir):
-            os.makedirs(outdir)
 
         media_file = get_sess_audio(sesspath)
         if not media_file:
@@ -58,6 +55,10 @@ def extractSamples(datadir,
         media_type = Path(media_file).suffix
         print(f'...Input media: {media_file}')
 
+        outdir = os.path.join(outdir_stem, f'{sessname}{suffix_use}')
+        if not os.path.exists(outdir):
+            os.makedirs(outdir)
+            
         # detect if audio or video
         if media_type in ['.MOV', '.mov', '.mp4']: # media is VIDEO
             if convert:
