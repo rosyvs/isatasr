@@ -42,6 +42,7 @@ def extractSamples(datadir,
         sg_end_ms = HHMMSS_to_sec(endHMS) *1000
 
         sesspath = os.path.join(datadir, sessname)
+        print('\n')
         print(sesspath)
         if not os.path.exists(sesspath):
             print(f'!!!WARNING: session directory not found: {sesspath}')
