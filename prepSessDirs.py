@@ -27,6 +27,7 @@ def prepSessDirs(filelist, outdir, link_media, convert_to_wav):
         # Check if file actually exists
         if not os.path.exists(media_path):
             print('!!! file does not exist')
+            continue
 
         sessname = Path(media_path).stem
         # remove extra extensions e.g. .mp4.mp4 that are present in some source media files
