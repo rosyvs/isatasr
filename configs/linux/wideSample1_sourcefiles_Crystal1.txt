@@ -8,5 +8,5 @@
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-11_si_l3_p6_video_yeti9.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_SI_L4_P2_video_yeti5.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p4_Video_yeti8.MOV
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p5_video_yeti4.MOV
+/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p5_VIDEO_yeti4.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p6_video_ipad9.MOV
