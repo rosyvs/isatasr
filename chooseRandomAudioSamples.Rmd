@@ -184,35 +184,35 @@ ksamples %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-02-08.c
 FUNCTIONS
 ```{r functions}
 fix_missing_SG_timestamps<-function(df){
-    # if (class(df$Group.Start.Time)=='character'){df$Group.Start.Time <- as.POSIXlt(df$Group.Start.Time)}
-    # if (class(df$Group.End.Time)=='character'){df$Group.End.Time <- as.POSIXlt(df$Group.End.Time)}
-    
-    # the only way i could get the time format properly is to convert numeric->times->character->hms... ugh
-    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.numeric)
-    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), chron::times)
-    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.character)
-    df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.hms)
-    
-    
-    
-    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.numeric)
-    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), chron::times)
-    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.character)
-    df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.hms)
-    
-    # some of the files do not yet have the small groups start/end time manually verified.
-    # fill in Timestamps of small group start/end using Group.Start.Time when missing the timestamp
-    df$Timestamp.of.Small.Group.Start[is.na(df$Timestamp.of.Small.Group.Start)] <- df$Group.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)]
-    df$Timestamp.of.Small.Group.End[is.na(df$Timestamp.of.Small.Group.End)] <- df$Group.End.Time[is.na(df$Timestamp.of.Small.Group.End)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.End)]
-    
-    # if still no timestamp of small group end, assume end of recordign
-    
-    # replace negative timestamps with 0 (this means smallgroup started before recording)
-    df$Timestamp.of.Small.Group.Start[df$Timestamp.of.Small.Group.Start <0] <- hms(0,0,0)
-    
-    # Drop rows which still don't have timestamps for both start and end of small groups
-    df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End))
-    df$Small.Group.Duration <- as_hms(df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start )
+  # if (class(df$Group.Start.Time)=='character'){df$Group.Start.Time <- as.POSIXlt(df$Group.Start.Time)}
+  # if (class(df$Group.End.Time)=='character'){df$Group.End.Time <- as.POSIXlt(df$Group.End.Time)}
+  
+  # the only way i could get the time format properly is to convert numeric->times->character->hms... ugh
+  df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.numeric)
+  df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), chron::times)
+  df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.character)
+  df <- df %>% mutate_at(c('Timestamp.of.Small.Group.Start', 'Timestamp.of.Small.Group.End', 'Timestamp.of.Enrollment.Start', 'Timestamp.of.Enrollment.End' ), as.hms)
+  
+  
+  
+  df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.numeric)
+  df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), chron::times)
+  df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.character)
+  df <- df %>% mutate_at(c( 'Record.Start.Time', 'Group.Start.Time','Group.End.Time' ), as.hms)
+  
+  # some of the files do not yet have the small groups start/end time manually verified.
+  # fill in Timestamps of small group start/end using Group.Start.Time when missing the timestamp
+  df$Timestamp.of.Small.Group.Start[is.na(df$Timestamp.of.Small.Group.Start)] <- df$Group.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.Start)]
+  df$Timestamp.of.Small.Group.End[is.na(df$Timestamp.of.Small.Group.End)] <- df$Group.End.Time[is.na(df$Timestamp.of.Small.Group.End)] - df$Record.Start.Time[is.na(df$Timestamp.of.Small.Group.End)]
+  
+  # if still no timestamp of small group end, assume end of recordign
+  
+  # replace negative timestamps with 0 (this means smallgroup started before recording)
+  df$Timestamp.of.Small.Group.Start[df$Timestamp.of.Small.Group.Start <0] <- hms(0,0,0)
+  
+  # Drop rows which still don't have timestamps for both start and end of small groups
+  df <- df%>% drop_na(c(Timestamp.of.Small.Group.Start, Timestamp.of.Small.Group.End))
+  df$Small.Group.Duration <- as_hms(df$Timestamp.of.Small.Group.End-df$Timestamp.of.Small.Group.Start )
   return(df)
 }
 
@@ -336,16 +336,16 @@ for (k in 1:opts.Niter){
     has_A <- length(asheet)>0
     has_V <- length(vsheet)>0
     if (has_V){
-          if(length(vsheet)>1){ 
-            video=list()
-            for( v in 1:length(vsheet)){
-      video[[v]] <- read.xlsx(catalog_file, sheet=vsheet[v], detectDates=T,na.strings = "NA") %>% select(mediacols) %>% mutate_at(vars(contains('Timestamp')), as.numeric) %>% mutate_at(vars(Student.IDs), as.character)
-            }
-            video <- bind_rows(video)
-            }else{
-            video <- read.xlsx(catalog_file, sheet=vsheet, detectDates=T,na.strings = "NA") %>% select(mediacols)
-            }
-
+      if(length(vsheet)>1){ 
+        video=list()
+        for( v in 1:length(vsheet)){
+          video[[v]] <- read.xlsx(catalog_file, sheet=vsheet[v], detectDates=T,na.strings = "NA") %>% select(mediacols) %>% mutate_at(vars(contains('Timestamp')), as.numeric) %>% mutate_at(vars(Student.IDs), as.character)
+        }
+        video <- bind_rows(video)
+      }else{
+        video <- read.xlsx(catalog_file, sheet=vsheet, detectDates=T,na.strings = "NA") %>% select(mediacols)
+      }
+      
       # video[video=='NA'] <- NA
       print(paste('n video files total: ' , nrow(video)))
       
@@ -369,17 +369,17 @@ for (k in 1:opts.Niter){
       
     }
     if (has_A){
-                if(length(asheet)>1){ 
-            audio=list()
-            for( a in 1:length(asheet)){
-      audio[[a]] <- read.xlsx(catalog_file, sheet=asheet[a], detectDates=T,na.strings = "NA") %>% select(mediacols) %>% mutate_at(vars(contains('Timestamp')), as.numeric)  %>% mutate_at(vars(Student.IDs), as.character) 
-            }
-            audio <- bind_rows(audio)
-            }else{
-            audio <- read.xlsx(catalog_file, sheet=asheet, detectDates=T,na.strings = "NA") %>% select(mediacols)
-            }
-
-            names(audio) <- make.names(names(audio))
+      if(length(asheet)>1){ 
+        audio=list()
+        for( a in 1:length(asheet)){
+          audio[[a]] <- read.xlsx(catalog_file, sheet=asheet[a], detectDates=T,na.strings = "NA") %>% select(mediacols) %>% mutate_at(vars(contains('Timestamp')), as.numeric)  %>% mutate_at(vars(Student.IDs), as.character) 
+        }
+        audio <- bind_rows(audio)
+      }else{
+        audio <- read.xlsx(catalog_file, sheet=asheet, detectDates=T,na.strings = "NA") %>% select(mediacols)
+      }
+      
+      names(audio) <- make.names(names(audio))
       print(paste('n audio files total: ' , nrow(audio)))
       
       audio <- audio %>% rename_at(vars(grep("Useable",names(.))), ~'useable')
@@ -446,7 +446,7 @@ for (k in 1:opts.Niter){
       student_remaining <- setdiff(student_remaining, unlist(thisrow$listStudentID))
       
       # select consistent variables 
-      thisrow <- thisrow %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, Student.IDs, is_yeti, contains('sample_'))) %>% rename(Lesson = Lesson..)
+      thisrow <- thisrow %>% select(c(Teacher, Period, Lesson.., Name.of.File, URL.to.File, Student.IDs,Timestamp.of.Small.Group.Start,Timestamp.of.Small.Group.End, Timestamp.of.Enrollment.Start ,Timestamp.of.Enrollment.End, is_yeti, contains('sample_'))) %>% rename(Lesson = Lesson..)
       
       # force classes
       thisrow$Period <- as.character(thisrow$Period)
@@ -463,7 +463,7 @@ for (k in 1:opts.Niter){
   widesample <- bind_rows(widesample) %>% data.frame()
   widesample %>% write.csv(paste0('../annotation/samples_wide_5inCenter_2022-04-22_',k,'.csv'))
   n_students_wide[k] <- length(student_list)-length(student_remaining)
-
+  
 } #k
 ```
 
