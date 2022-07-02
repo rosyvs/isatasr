@@ -33,10 +33,14 @@ def extractSamples(datadir,
     #     # skip header
     #     next(reader)
     samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, names=['sessname','startHMS','endHMS'], header=0).dropna().sort_values(by='sessname').reset_index()
+
+    print(f'0. path of csv: {extract_timings_csv}')
+    print(f'1. N rows in samples csv: {len(samples_df.index)}')
+
     # enumerate samples by session and check if there are multiple samples from a given session
     samples_df['count'] = samples_df.groupby('sessname').cumcount()
 
-    print(f'N rows in samples csv: {len(samples_df.index)}')
+    print(f'2. N rows in samples csv: {len(samples_df.index)}')
 
     for i, rec in samples_df.iterrows():
         _,sessname,startHMS,endHMS, count = rec.values
