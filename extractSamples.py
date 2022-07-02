@@ -23,6 +23,8 @@ def extractSamples(datadir,
                     outdir_stem, 
                     suffix='_excerpt', 
                     convert=False):
+
+    print('EXTRACTING SAMPLES...')
     # options for writing out audio if converting
     WAV_CHANNELS = 1
     WAV_SAMPLE_RATE = 48000
@@ -33,6 +35,8 @@ def extractSamples(datadir,
     samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, names=['sessname','startHMS','endHMS'], header=0).dropna().sort_values(by='sessname').reset_index()
     # enumerate samples by session and check if there are multiple samples from a given session
     samples_df['count'] = samples_df.groupby('sessname').cumcount()
+
+    print(f'N rows in samples csv: {len(samples_df.index)}')
 
     for i, rec in samples_df.iterrows():
         _,sessname,startHMS,endHMS, count = rec.values
