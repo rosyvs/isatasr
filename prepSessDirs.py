@@ -22,8 +22,8 @@ def prepSessDirs(filelist, outdir, link_media, convert_to_wav):
         medialist = list(os.path.normpath(line) for line in medialist if line)
 
     for media_path in medialist: 
-        print(f'media: {media_path}')
         media_path = media_path.strip()
+        print(f'media: {media_path}')
         # Check if file actually exists
         if not os.path.exists(media_path):
             print('!!! file does not exist')

@@ -1,7 +1,7 @@
-/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_p4_yeti10.m4a
+/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_P4_yeti10.m4a
 /mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-09-28_SI_L2_P4_yeti6.m4a
 /mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-09-29_SI_L2_P4_yeti10.m4a
-/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_p5_yeti10.m4a
+/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_P5_yeti10.m4a
 /mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_p5_yeti6.m4a
 /mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-09-28_SI_l2_p7_ipad5.m4a
 /mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-09-29_SI_l2_p7_ipad6.m4a
@@ -13,7 +13,7 @@
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-09_SI_l2_p4_video_yeti7.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-04_si_l2_p4_yeti5.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-05_SI_L2_p5_Video_Yeti7.MOV
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p5_video_yeti4.MOV
+/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p5_VIDEO_yeti4.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-11_si_l3_p5_video_yeti4(2).MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-11_si_l3_p6_video_yeti9.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-01_SI_L1_p6_yeti07.MOV
@@ -22,9 +22,9 @@
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_2021-10-4_SI_L4_P3_yeti4_Group.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_2021-10-1_SI_L4_P3_yeti4_Group(2-2).MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-09-28_SI_L4_P3_yeti4_Group.MOV
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-09-24_SI_L3_P4_yeti4.MOV
+/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-09-24_SI_L3_P4_yeti4.m4a
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-18_si_l4_p6_video_ipad9.MOV
-/mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-10-04_SI_L4_p2_yeti5.m4a
+/mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-10-04_SI_L4_P2_yeti5.m4a
 /mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-09-29_SI_L2_p2_yeti6.m4a
 /mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-10-07_SI_l4_p2_yeti7_ipad10.m4a
 /mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-09-29_SI_L2_P2_yeti9.m4a
