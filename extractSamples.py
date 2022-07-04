@@ -24,7 +24,6 @@ def extractSamples(datadir,
                     suffix='_excerpt', 
                     convert=False):
 
-    print('EXTRACTING SAMPLES...')
     # options for writing out audio if converting
     WAV_CHANNELS = 1
     WAV_SAMPLE_RATE = 48000
@@ -35,8 +34,7 @@ def extractSamples(datadir,
     samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, index_col=False,
         names=['sessname','startHMS','endHMS'], header=0).sort_values(by='sessname',ignore_index=True).reset_index(drop=True)
 
-    print(f'0. path of csv: {extract_timings_csv}')
-    print(f'1. N rows in samples csv: {len(samples_df.index)}')
+    print('EXTRACTING {len(samples_df.index)} SAMPLES...')
 
     # enumerate samples by session and check if there are multiple samples from a given session
     samples_df['count'] = samples_df.groupby('sessname').cumcount()
@@ -51,7 +49,6 @@ def extractSamples(datadir,
         sg_end_ms = HHMMSS_to_sec(endHMS) *1000
 
         sesspath = os.path.join(datadir, sessname)
-        print('\n')
         print(sesspath)
         if not os.path.exists(sesspath):
             print(f'!!!WARNING: session directory not found: {sesspath}')
