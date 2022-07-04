@@ -34,17 +34,18 @@ def extractSamples(datadir,
     samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, index_col=False,
         names=['sessname','startHMS','endHMS'], header=0).sort_values(by='sessname',ignore_index=True).reset_index(drop=True)
 
-    print('EXTRACTING {len(samples_df.index)} SAMPLES...')
+    print(f'EXTRACTING {len(samples_df.index)} SAMPLES...')
 
     # enumerate samples by session and check if there are multiple samples from a given session
     samples_df['count'] = samples_df.groupby('sessname').cumcount()
-
-    print(f'2. N rows in samples csv: {len(samples_df.index)}')
 
     for i, rec in samples_df.iterrows():
         sessname,startHMS,endHMS, count = rec.values
         suffix_use = f'{suffix}{count}' if count > 0 else suffix # if multiple samples per recording, give a diffrent name          
         # times in msec rel to start of recording
+
+        print(f'    sample start:{startHMS} end:{endHMS}')
+
         sg_start_ms = HHMMSS_to_sec(startHMS) *1000
         sg_end_ms = HHMMSS_to_sec(endHMS) *1000
 
