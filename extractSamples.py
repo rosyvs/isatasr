@@ -32,7 +32,7 @@ def extractSamples(datadir,
     #     # skip header
     #     next(reader)
     samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, index_col=False,
-        names=['sessname','startHMS','endHMS'], header=0).sort_values(by='sessname',ignore_index=True).reset_index(drop=True)
+        names=['sessname','startHMS','endHMS'], header=0).dropna().sort_values(by='sessname',ignore_index=True).reset_index(drop=True)
 
     print(f'EXTRACTING {len(samples_df.index)} SAMPLES...')
 
@@ -43,14 +43,13 @@ def extractSamples(datadir,
         sessname,startHMS,endHMS, count = rec.values
         suffix_use = f'{suffix}{count}' if count > 0 else suffix # if multiple samples per recording, give a diffrent name          
         # times in msec rel to start of recording
-
-        print(f'    sample start:{startHMS} end:{endHMS}')
-
         sg_start_ms = HHMMSS_to_sec(startHMS) *1000
         sg_end_ms = HHMMSS_to_sec(endHMS) *1000
 
         sesspath = os.path.join(datadir, sessname)
         print(sesspath)
+        print(f'    sample start:{startHMS} end:{endHMS}')
+
         if not os.path.exists(sesspath):
             print(f'!!!WARNING: session directory not found: {sesspath}')
             continue
