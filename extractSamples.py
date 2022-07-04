@@ -32,7 +32,8 @@ def extractSamples(datadir,
     #     reader = csv.reader(in_file)
     #     # skip header
     #     next(reader)
-    samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, names=['sessname','startHMS','endHMS'], header=0).dropna().sort_values(by='sessname').reset_index()
+    samples_df = pd.read_csv(extract_timings_csv,skip_blank_lines=True, index_col=False,
+        names=['sessname','startHMS','endHMS'], header=0).sort_values(by='sessname',ignore_index=True).reset_index(drop=True)
 
     print(f'0. path of csv: {extract_timings_csv}')
     print(f'1. N rows in samples csv: {len(samples_df.index)}')
@@ -125,9 +126,15 @@ if __name__ == "__main__":
     suffix=args.suffix, 
     convert=args.convert)
 
-    # # For debug in interactive: 
-    # datadir='./data/deepSampleTEST/'
-    # extract_timings_csv='./configs/deepSampleTEST_to_extract.csv'
-    # outdir_stem='./data/deepSampleTEST/'
-    # suffix='_5min'
-    # convert=True
+# # For debug in interactive: 
+# datadir='./data/deepSampleTEST/'
+# extract_timings_csv='./configs/deepSampleTEST_to_extract.csv'
+# outdir_stem='./data/deepSampleTEST/'
+# suffix='_5min'
+# convert=True
+
+# extractSamples(datadir=datadir,
+# extract_timings_csv=extract_timings_csv, 
+# outdir_stem=outdir_stem, 
+# suffix=suffix, 
+# convert=convert)
