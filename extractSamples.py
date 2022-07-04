@@ -44,7 +44,7 @@ def extractSamples(datadir,
     print(f'2. N rows in samples csv: {len(samples_df.index)}')
 
     for i, rec in samples_df.iterrows():
-        _,sessname,startHMS,endHMS, count = rec.values
+        sessname,startHMS,endHMS, count = rec.values
         suffix_use = f'{suffix}{count}' if count > 0 else suffix # if multiple samples per recording, give a diffrent name          
         # times in msec rel to start of recording
         sg_start_ms = HHMMSS_to_sec(startHMS) *1000
