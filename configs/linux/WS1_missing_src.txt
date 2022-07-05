@@ -1,13 +1,3 @@
-/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-10-05_SI_L4_P5_yeti10.m4a
-/mnt/isat-data-repository/2021-fall-data/Chris M/Chris_M_21-09-28_SI_l2_p7_ipad5.m4a
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-11-04_si_l2_p4_yeti5.MOV
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-09-28_SI_L4_P2_Group.MOV
 /mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_2021-10-1_SI_L4_P3_yeti4_Group(2-2).MOV
-/mnt/isat-data-repository/2021-fall-data/Crystal/Crystal_21-09-28_SI_L4_P3_yeti4_Group.MOV
-/mnt/isat-data-repository/2021-fall-data/Faye/Faye_21-10-04_SI_L4_P2_yeti5.m4a
-/mnt/isat-data-repository/2021-fall-data/Jamilla/Jamilla_21-09-24__SI_L4&5_p2_ipad6.m4a
-/mnt/isat-data-repository/2021-fall-data/Mai/Mai_21-10-05_SI_L1_P4_Sony4.mp3
-/mnt/isat-data-repository/2021-fall-data/Mai/Mai_21-10-29_SI_L4_P4_yeti2_3
-/mnt/isat-data-repository/2022-spring-data/Tami/Tami_22_01_28_SI-L2_P1_ipad1.MOV
-/mnt/isat-data-repository/2022-spring-data/Tami/Tami_22_01_28_SI-L2_P1_ipad12.MOV
-/mnt/isat-data-repository/2022-spring-data/Tami/Tami_22_01_28_SI-L2_P1_ipad9.MOV
+/mnt/isat-data-repository/2021-fall-data/Mai/Mai_21-10-19_SI_L2_P4_yeti1.m4a
+/mnt/isat-data-repository/2021-fall-data/Mai/Mai_21-10-29_SI_L4_P4_yeti2_3.m4a
