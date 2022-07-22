@@ -16,6 +16,7 @@ make_sorted_copy = True # ELAN outputs transcripts sorted by speaker not timesta
 export_transcript_to_sess = False # save iSAT-formatted transcripts (transcript .txt, labels .csv) in correct session directories (use if these already exist)
 
 baseSessDir = os.path.normpath(os.path.expanduser(
+    '~/Dropbox (Emotive Computing)/iSAT/AudioPrepro/data/deepSample2/')) # where sessions are stored. Will output in separate /transcript dir per session dir. 
 
 # deidentify = True # attempts to redact names from the transcript TODO
 
